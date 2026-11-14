@@ -175,6 +175,12 @@ live frame query for each move.
   one article does not need it: it scores that article's wordings exactly. Asking across all
   articles, which would use the index, is not built.
 
+## The film
+
+`video/` holds a narrated film of under a minute: recordings of the real page, made by a script
+that drives the running site, composed with Remotion. `video/README.md` says how to record,
+voice and render it.
+
 ## Credits and licences
 
 - Article text: Finnish Wikipedia and its authors, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
