@@ -53,11 +53,16 @@ export function segmentIndexAt(segments: readonly Segment[], t: number): number 
  * wording lands on its start first. With nowhere to go, `t` is returned unchanged.
  */
 export function stepChange(segments: readonly Segment[], t: number, dir: 1 | -1): number {
-  const starts = segments.map((segment) => segment.start);
+  return stepTo(segments.map((segment) => segment.start), t, dir);
+}
+
+/** The nearest start time after `t` (dir 1) or before it (dir -1); `t` itself when there is none. */
+export function stepTo(starts: readonly number[], t: number, dir: 1 | -1): number {
+  const ordered = [...starts].sort((a, b) => a - b);
   if (dir === 1) {
-    return starts.find((start) => start > t) ?? t;
+    return ordered.find((start) => start > t) ?? t;
   }
-  return starts.findLast((start) => start < t) ?? t;
+  return ordered.findLast((start) => start < t) ?? t;
 }
 
 export function formatSpan(ms: number): string {

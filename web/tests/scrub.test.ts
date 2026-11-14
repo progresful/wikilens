@@ -213,6 +213,36 @@ describe('playing', () => {
     expect(h.hasFrameScheduled()).toBe(false);
   });
 
+  it('has already stopped when it reports the final time', () => {
+    const seen: boolean[] = [];
+    const scrubber = createScrubber({
+      fetchFrame: () => new Promise<Frame>(() => {}),
+      onTime: () => seen.push(scrubber.playing),
+      onFrame: () => {},
+      onError: () => {},
+      requestFrame: (cb) => {
+        pendingTick = cb;
+        return 1;
+      },
+      cancelFrame: () => {
+        pendingTick = null;
+      },
+    });
+    let pendingTick: ((now: number) => void) | null = null;
+    const run = (now: number): void => {
+      const cb = pendingTick;
+      pendingTick = null;
+      cb?.(now);
+    };
+    scrubber.open(1, range);
+    scrubber.seek(PLAY_DURATION_MS - 100);
+    scrubber.play([]);
+    run(0);
+    run(500);
+    expect(scrubber.time).toBe(PLAY_DURATION_MS);
+    expect(seen.at(-1)).toBe(false);      // a listener reading `playing` in onTime sees the stop
+  });
+
   it('restarts from the beginning when played at the end', () => {
     const h = harness();
     h.scrubber.open(1, range);

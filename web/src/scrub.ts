@@ -130,8 +130,8 @@ export function createScrubber(deps: ScrubDeps): Scrubber {
         dwellUntil = now + (upcoming.reverted ? DWELL_REVERTED_MS : DWELL_MS);
       }
       if (next >= page.range.end) {
+        stopClock();                 // before the last move, so a listener sees `playing` already false
         moveTo(page.range.end);
-        stopClock();
         return;
       }
       moveTo(next);

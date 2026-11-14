@@ -8,6 +8,7 @@ import {
   segmentIndexAt,
   snapTime,
   stepChange,
+  stepTo,
   timeToX,
   xToTime,
 } from '../src/time';
@@ -85,6 +86,16 @@ describe('segments', () => {
     expect(stepChange(segs, at(350), -1)).toBe(at(300));
     expect(stepChange(segs, at(300), -1)).toBe(at(100));
     expect(stepChange(segs, at(100), -1)).toBe(at(100));
+  });
+});
+
+describe('stepTo', () => {
+  it('moves among plain start times the same way', () => {
+    expect(stepTo([10, 20, 30], 25, -1)).toBe(20);
+    expect(stepTo([10, 20, 30], 20, -1)).toBe(10);
+    expect(stepTo([10, 20, 30], 25, 1)).toBe(30);
+    expect(stepTo([], 25, 1)).toBe(25);
+    expect(stepTo([30, 10, 20], 15, 1)).toBe(20);     // order of the list does not matter
   });
 });
 

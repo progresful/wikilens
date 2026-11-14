@@ -208,7 +208,8 @@ def main() -> int:  # pragma: no cover - CLI
         StubEmbedder() if os.environ.get("WIKILENS_EMBEDDER") == "stub"
         else OllamaEmbedder(settings.ollama_url, settings.embed_model)
     )
-    uvicorn.run(create_app(settings, embedder), host="127.0.0.1", port=8000, log_level="warning")
+    port = int(os.environ.get("WIKILENS_API_PORT", "8000"))   # the browser tests run a second API on 8001
+    uvicorn.run(create_app(settings, embedder), host="127.0.0.1", port=port, log_level="warning")
     return 0
 
 

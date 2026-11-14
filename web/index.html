@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WikiLens</title>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="brand">
+        <span class="wordmark">WikiLens</span>
+        <span class="tagline">Finnish Wikipedia through time · MariaDB system-versioned tables</span>
+      </div>
+      <div class="top-right">
+        <div id="picker"></div>
+        <button class="about-toggle" type="button" aria-expanded="false">about the data</button>
+      </div>
+    </header>
+
+    <section class="ask" id="ask"></section>
+
+    <main class="stage">
+      <div class="big-year" aria-hidden="true"></div>
+      <div class="page-scroll" id="page-scroll">
+        <article class="page" id="page" lang="fi"></article>
+      </div>
+      <aside class="minimap" id="minimap" aria-hidden="true"></aside>
+      <aside class="about" id="about" hidden></aside>
+    </main>
+
+    <footer class="dock">
+      <div class="controls">
+        <div class="transport">
+          <button class="prev" type="button" title="previous change (←)" aria-label="previous change">◀</button>
+          <button class="play" type="button" title="play / pause (space)" aria-label="play" aria-pressed="false">▶</button>
+          <button class="next" type="button" title="next change (→)" aria-label="next change">▶</button>
+        </div>
+        <div class="now">
+          <span class="now-date"></span>
+          <span class="now-rel"></span>
+        </div>
+        <div class="error-line" role="alert" hidden></div>
+        <div id="sql"></div>
+      </div>
+      <div id="timeline"></div>
+      <div class="bottom">
+        <div class="legend" id="legend"></div>
+        <div class="credit"></div>
+      </div>
+    </footer>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
