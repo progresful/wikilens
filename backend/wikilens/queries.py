@@ -21,7 +21,11 @@ WHERE page_id = %s
 ORDER BY pos, para_id"""
 
 # Ask: rank every wording this article ever had, including ones deleted since.
-RANK_SQL = """SELECT p.para_id, MIN(VEC_DISTANCE_COSINE(v.embedding, VEC_FromText(%s))) AS distance
+# The question's vector is parsed once into a session variable. Written inline as
+# VEC_FromText('[...]'), MariaDB parsed the 1024 numbers again for every row: 287 ms instead
+# of 14 ms on a 4,359-row article (docs/measurements.md).
+SET_QUESTION_SQL = "SET @question = VEC_FromText(%s)"
+RANK_SQL = """SELECT p.para_id, MIN(VEC_DISTANCE_COSINE(v.embedding, @question)) AS distance
 FROM paragraph FOR SYSTEM_TIME ALL AS p
 JOIN wording_vector AS v ON v.hash = p.hash
 WHERE p.page_id = %s
@@ -69,7 +73,8 @@ def frame_at(con: Connection, page_id: int, t: datetime) -> FrameResult:
 def rank_paragraphs(con: Connection, page_id: int, vector: Sequence[float], limit: int = 3) -> list[tuple[int, float]]:
     """(para_id, distance), closest first. A paragraph's distance is that of its closest wording."""
     with con.cursor() as cur:
-        cur.execute(RANK_SQL, (vector_literal(vector), page_id, limit))
+        cur.execute(SET_QUESTION_SQL, (vector_literal(vector),))
+        cur.execute(RANK_SQL, (page_id, limit))
         return [(para_id, float(distance)) for para_id, distance in cur.fetchall()]
 
 
@@ -155,8 +160,8 @@ class Coverage:
 
 
 def rank_sql_for_display(page_id: int, limit: int = 3) -> str:
-    """RANK_SQL as shown on screen: the 1024 numbers of the question vector are not printed."""
-    return RANK_SQL.replace("VEC_FromText(%s)", "VEC_FromText(@question)", 1) % (page_id, limit)
+    """The two statements of a ranking as shown on screen; the vector's 1024 numbers are not printed."""
+    return "SET @question = VEC_FromText('[the question as 1024 numbers]');\n" + RANK_SQL % (page_id, limit)
 
 
 def paragraph_history(con: Connection, page_id: int, para_id: int) -> list[HistoryRow]:

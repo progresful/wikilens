@@ -48,3 +48,13 @@ def test_hash_depends_on_kind_and_text():
     assert a.hash == Block.of("p", "a").hash
     assert a.hash != Block.of("li", "a").hash
     assert a.hash != Block.of("p", "b").hash
+
+
+def test_html_entities_are_decoded():
+    assert pairs("Tappiot olivat 22&nbsp;800 kaatunutta &ndash; arvio &amp; lähde.") == [
+        ("p", "Tappiot olivat 22 800 kaatunutta – arvio & lähde.")
+    ]
+
+
+def test_escaped_markup_stays_text():
+    assert pairs("Kirjoita &lt;b&gt;lihavoitu&lt;/b&gt; näin.") == [("p", "Kirjoita <b>lihavoitu</b> näin.")]

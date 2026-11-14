@@ -11,9 +11,11 @@ Changed from the original in three ways:
     still showed it.
   - A redirect page yields no blocks.
   - Openers and closers are found with one regular expression instead of a character loop.
+  - HTML entities (&nbsp;, &ndash;, ...) are decoded.
 """
 from __future__ import annotations
 
+import html
 import re
 
 from wikilens.blocks import Block
@@ -70,6 +72,7 @@ def clean(wikitext: str) -> list[Block]:
     t = _LINK.sub(r"\1", t)
     t = _EXTERNAL_LINK.sub(r"\1", t)
     t = _TAG.sub("", t)
+    t = html.unescape(t)   # after the tags are gone, so escaped markup stays visible as text
     t = t.replace("'''", "").replace("''", "")
     blocks: list[Block] = []
     for raw_line in t.split("\n"):

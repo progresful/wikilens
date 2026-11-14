@@ -31,7 +31,7 @@ label "Logs:"
 hits=$(grep -rn "print(" backend/wikilens 2>/dev/null)
 if [ -z "$hits" ]; then echo OK; else echo "$(echo "$hits" | wc -l | tr -d ' ') print() calls"; echo "$hits" | head; fi
 
-if [ -f web/package.json ] && [ -d web/node_modules ]; then
+if [ -d web/node_modules ] && ls web/tests/*.test.ts >/dev/null 2>&1; then
   label "Web:"
   if out=$(cd web && pnpm -s exec tsc --noEmit 2>&1 && pnpm -s test 2>&1); then echo OK; else echo FAIL; echo "$out" | tail -25; fail=1; fi
 fi

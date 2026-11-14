@@ -47,3 +47,18 @@ Not tested, and not relied on: a vector index on a system-versioned table.
 | Frame query (`FOR SYSTEM_TIME AS OF`), median of 20 | 0.69 ms at 2005-06-01 (52 blocks), 2.19 ms at 2012-06-01 (267 blocks), 2.09 ms at 2026-09-30 (297 blocks) |
 
 Database time only, measured in the Python process around execute and fetch, warm, one connection.
+
+## Embeddings and asking, 14 November 2026
+
+bge-m3 through Ollama 0.40.16 on the machine above, batches of 32, article 1256 (Talvisota).
+
+| | |
+|---|---|
+| Wordings embedded | 2,314 (paragraphs and list items of 40+ characters; headings and shorter ones skipped) |
+| Embedding speed | 113 s, 20.5 passages per second |
+| Question embedding | about 30 ms warm, 204 ms for the first call |
+| Ranking every wording the article ever had (4,359 versioned rows joined to their vectors) | **14 ms** with the question vector in a session variable (`SET @question = VEC_FromText(?)`) |
+| The same ranking with the vector written inline as `VEC_FromText('[...]')` | 287 ms: MariaDB parsed the 1,024 numbers again for every row |
+| The same with the vector passed as a binary parameter | 9.8 ms; not used, because the statement shown on screen would contain a blob |
+
+All three forms returned the same three paragraphs with the same distances. Medians of 7 runs.
