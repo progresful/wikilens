@@ -70,6 +70,7 @@ verified query shapes are in [docs/measurements.md](docs/measurements.md).
 | Ranking every wording of an article | 12 ms median, 18 ms at the 95th percentile |
 | Question embedding | 20 ms |
 | Correctness | for every article, the stored state at sampled revisions equals the cleaned text of that revision |
+| Dragging the whole timeline of a 2,143-revision article | every pointer move gets its own live query; 55 to 60 frames per second; no main-thread task over 50 ms |
 
 These are database and model times. They do not include network, JSON or drawing.
 
@@ -148,6 +149,10 @@ live frame query for each move.
   lasted.
 - **Local only.** The API listens on 127.0.0.1 and has no rate limiting or accounts. It is a
   demo, not a deployment.
+- **The vector index is not used by a screen yet.** `wording_vector` has an HNSW index, and
+  `docs/measurements.md` shows MariaDB using it for nearest-neighbour search. Ranking inside
+  one article does not need it: it scores that article's wordings exactly. Asking across all
+  articles, which would use the index, is not built.
 
 ## Credits and licences
 

@@ -284,3 +284,13 @@ def test_reviewed_articles_keep_the_order_of_the_stories_file(con, tmp_path):
         listed = ok(test_client.get("/api/articles"))
     # the lead story first, as the file has it, although "Aakkonen" sorts before "Testisota"; then the rest by title
     assert [(a["pageId"], a["reviewed"]) for a in listed] == [(1, True), (2, True), (3, False)]
+
+
+def test_all_wordings_of_an_article_in_one_answer(client):
+    data = ok(client.get("/api/articles/1/wordings"))
+    assert len(data) == 9                                   # every wording the article ever had, deleted ones too
+    texts = {entry["text"] for entry in data.values()}
+    assert "Talvisota alkoi 30. marraskuuta 1939, kun Neuvostoliitto hyökkäsi Suomeen lol." in texts
+    assert {entry["kind"] for entry in data.values()} == {"h", "p"}
+    assert all(len(block_hash) == 32 for block_hash in data)
+    bad(client.get("/api/articles/999/wordings"), 404)

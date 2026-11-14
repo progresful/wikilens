@@ -38,6 +38,8 @@ export interface Api {
   overview(pageId: number): Promise<Overview>;
   frame(pageId: number, t: number, signal?: AbortSignal): Promise<Frame>;
   wordings(hashes: readonly string[]): Promise<Record<string, Wording>>;
+  /** Every wording an article ever had, in one request. */
+  articleWordings(pageId: number): Promise<Record<string, Wording>>;
   ask(pageId: number, question: string): Promise<AskResult>;
   paragraphTimeline(pageId: number, paraId: number): Promise<Segment[]>;
   coverage(): Promise<Coverage>;
@@ -82,6 +84,7 @@ export function createApi(fetchImpl: FetchLike = (url, init) => fetch(url, init)
       }
       return merged;
     },
+    articleWordings: (pageId) => request(`/api/articles/${pageId}/wordings`, wordingsSchema),
     ask: (pageId, question) =>
       request(`/api/articles/${pageId}/ask`, askResultSchema, {
         method: 'POST',

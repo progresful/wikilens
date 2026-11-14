@@ -37,6 +37,12 @@ test('markup in article text is shown as text', async ({ page }) => {
     const hashes = new URL(route.request().url()).searchParams.get('hashes')?.split(',') ?? [];
     await route.fulfill({ json: envelope(Object.fromEntries(hashes.map((h) => [h, { kind: 'p', text: hostile }]))) });
   });
+  await page.route('**/api/articles/1/wordings', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    const hashes = Object.keys(body.data);
+    await route.fulfill({ response, json: envelope(Object.fromEntries(hashes.map((h) => [h, { kind: 'p', text: hostile }]))) });
+  });
   await page.goto('/');
   await expect(page.locator('.para').first()).toHaveText(hostile);
   expect(await page.evaluate(() => (window as unknown as { __hostile?: number }).__hostile)).toBeUndefined();
@@ -123,4 +129,21 @@ test('with only full-experience articles there is no search box', async ({ page 
   await page.goto('/');
   await expect(page.locator('select.article-select')).toHaveValue('1');
   await expect(page.locator('input.article-search')).toHaveCount(0);
+});
+
+test('paragraph texts are loaded ahead, so scrubbing never waits for one', async ({ page }) => {
+  let perFrameRequests = 0;
+  await page.route('**/api/wordings?*', async (route) => {
+    perFrameRequests += 1;
+    await route.abort();                      // texts asked for frame by frame never arrive
+  });
+  await page.goto('/');
+  await expect(page.locator('.para.kind-p')).toHaveCount(3);      // from the article's wordings, fetched once
+  await clickTrackAt(page, Date.UTC(2010, 6, 1));
+  await expect(page.locator('.para.kind-p').first()).toContainText('alkoi marraskuussa 1939');
+  await clickTrackAt(page, Date.UTC(2012, 5, 1));
+  await expect(page.locator('.para.kind-p').first()).toContainText('30. marraskuuta 1939');
+  await expect(page.locator('.para.pending')).toHaveCount(0);
+  await expect(page.locator('.error-line')).toBeHidden();
+  expect(perFrameRequests).toBeLessThanOrEqual(1);                // at most the very first frame, before the bulk arrives
 });

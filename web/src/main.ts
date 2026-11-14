@@ -82,6 +82,7 @@ const scrubber = createScrubber({
     syncPlaying();
   },
   onFrame: (frame) => {
+    if (state.error !== null) dispatch({ type: 'error', message: null });   // the server answered: any earlier failure is over
     dispatch({ type: 'frame', frame });
     void loadWordings(frame);
   },
@@ -124,6 +125,16 @@ async function loadWordings(frame: Frame): Promise<void> {
   }
 }
 
+/** Every wording of the article, fetched once, so no later frame has to wait for a text. */
+async function loadAllWordings(pageId: number): Promise<void> {
+  try {
+    cache.put(await api.articleWordings(pageId));
+    if (state.pageId === pageId) dispatch({ type: 'wordings' });
+  } catch {
+    // Not fatal: each frame still asks for the texts it is missing.
+  }
+}
+
 function rangeFor(overview: Overview): { first: number; end: number } {
   // From 1 January of the first revision's year, so there is a short lead-in before the article exists.
   return { first: Date.UTC(new Date(overview.firstTs).getUTCFullYear(), 0, 1), end: overview.corpusEnd };
@@ -137,6 +148,7 @@ async function openArticle(pageId: number): Promise<void> {
     dispatch({ type: 'article-opened', pageId, overview, range });
     history.replaceState(null, '', `?article=${pageId}`);
     scrubber.seek(range.end);
+    void loadAllWordings(pageId);
   } catch (error: unknown) {
     dispatch({ type: 'error', message: message(error) });
   }

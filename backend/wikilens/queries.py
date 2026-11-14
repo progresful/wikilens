@@ -89,6 +89,21 @@ def wordings_by_hash(con: Connection, hashes: Sequence[bytes]) -> dict[bytes, tu
         return {bytes(block_hash): (kind, text) for block_hash, kind, text in cur.fetchall()}
 
 
+# Every wording an article ever had, so the browser can hold them all and a scrub never
+# waits for a paragraph's text.
+ARTICLE_WORDINGS_SQL = """SELECT DISTINCT w.hash, w.kind, w.text
+FROM paragraph FOR SYSTEM_TIME ALL AS p
+JOIN wording AS w ON w.hash = p.hash
+WHERE p.page_id = %s"""
+
+
+def article_wordings(con: Connection, page_id: int) -> dict[bytes, tuple[str, str]]:
+    """hash -> (kind, text) for every wording the article ever had."""
+    with con.cursor() as cur:
+        cur.execute(ARTICLE_WORDINGS_SQL, (page_id,))
+        return {bytes(block_hash): (kind, text) for block_hash, kind, text in cur.fetchall()}
+
+
 def nearest_wordings(con: Connection, vector: Sequence[float], limit: int = 10) -> list[tuple[bytes, float]]:
     with con.cursor() as cur:
         cur.execute(NEAREST_SQL, (vector_literal(vector), limit))

@@ -160,6 +160,13 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
             found = queries.wordings_by_hash(con, wanted)
         return envelope({block_hash.hex(): {"kind": kind, "text": text} for block_hash, (kind, text) in found.items()})
 
+    @app.get("/api/articles/{page_id}/wordings")
+    def all_wordings(page_id: int = PathParam(ge=1)) -> dict[str, Any]:
+        with pool.connection() as con:
+            require_article(con, page_id)
+            found = queries.article_wordings(con, page_id)
+        return envelope({block_hash.hex(): {"kind": kind, "text": text} for block_hash, (kind, text) in found.items()})
+
     @app.post("/api/articles/{page_id}/ask")
     def ask(body: AskRequest, page_id: int = PathParam(ge=1)) -> dict[str, Any]:
         question = clean_question(body.question)

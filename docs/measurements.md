@@ -84,6 +84,23 @@ The first parallel load failed: two loaders sharing a wording collided with Mari
 under the default isolation level. Loads now run at READ COMMITTED and insert wordings in hash
 order; `backend/tests/test_ingest_roundtrip.py` reproduces the collision.
 
+## Dragging across the whole timeline, 14 November 2026
+
+`node web/scripts/drag-probe.mjs` in headless Chromium at 1440 by 900, on the real Talvisota
+article (about 300 blocks on the page, 2,143 revisions), dragging from the corpus end back to
+2003 in 240 pointer moves. Run while the tier 2 load was using all eight cores.
+
+| | No question | With a question asked |
+|---|---|---|
+| Pointer moves | 240 | 240 |
+| Live `AS OF` queries answered | 241: every move got its frame | 241 |
+| Animation frames per second | 55 | 60 |
+| Main-thread tasks longer than 50 ms | 0 | 0 |
+| Paragraphs left waiting for text | 0 | 0 |
+
+An article's paragraph texts are fetched once when it opens (`GET /api/articles/{id}/wordings`),
+so a frame only carries paragraph identities and hashes.
+
 <!-- measured by wikilens.measure: start -->
 ## Coverage and speed, measured
 

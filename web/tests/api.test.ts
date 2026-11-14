@@ -125,3 +125,12 @@ describe('api client', () => {
     ]);
   });
 });
+
+describe('all wordings of an article', () => {
+  it('fetches every wording of an article in one request', async () => {
+    const wordings = { aa: { kind: 'p', text: 'yksi' }, bb: { kind: 'h', text: 'Tausta' } };
+    const { fetchImpl, calls } = fakeFetch(() => json(wordings));
+    await expect(createApi(fetchImpl).articleWordings(7)).resolves.toEqual(wordings);
+    expect(calls.map((call) => call.url)).toEqual(['/api/articles/7/wordings']);
+  });
+});
