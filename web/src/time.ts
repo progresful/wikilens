@@ -74,7 +74,7 @@ export function formatSpan(ms: number): string {
   const months = Math.round(days / DAYS_PER_MONTH);
   const years = Math.floor(months / 12);
   const rest = months % 12;
-  return [years > 0 ? `${years}y` : '', rest > 0 ? `${rest}m` : ''].filter(Boolean).join(' ');
+  return [years > 0 ? `${years}y` : '', rest > 0 ? `${rest}mo` : ''].filter(Boolean).join(' ');
 }
 
 export function formatDate(t: number): string {

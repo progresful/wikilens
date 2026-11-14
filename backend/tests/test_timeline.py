@@ -96,6 +96,6 @@ def test_format_duration():
     assert f(timedelta(minutes=7)) == "7 min"
     assert f(timedelta(hours=5)) == "5 h"
     assert f(timedelta(days=12)) == "12 days"
-    assert f(timedelta(days=1218)) == "3y 4m"
+    assert f(timedelta(days=1218)) == "3y 4mo"
     assert f(timedelta(days=1096)) == "3y"
-    assert f(timedelta(days=90)) == "3m"
+    assert f(timedelta(days=90)) == "3mo"

@@ -19,8 +19,12 @@ export interface PageModel {
 
 export interface PageView {
   update(model: PageModel): void;
-  /** The element of a paragraph currently on the page. */
-  elementFor(paraId: number): HTMLElement | null;
+  /**
+   * The element of the tracked paragraph. It keeps its place on the page while the paragraph
+   * is out of the frame (removed for a period, or the frame has not caught up yet); if the
+   * paragraph has never been on the page, an element is made for it at the top.
+   */
+  answerElement(paraId: number): HTMLElement;
   readonly blocks: HTMLElement;
 }
 
@@ -29,7 +33,7 @@ const CHURN_CLASSES = ['churn-1', 'churn-2', 'churn-3', 'churn-4', 'churn-5'] as
 
 function applyWording(element: HTMLElement, hash: string, wording: Wording | undefined, ownsText: boolean): void {
   if (wording === undefined) {
-    element.classList.add('pending');
+    if (ownsText) element.classList.add('pending');
     return;
   }
   if (element.dataset.hash === hash && !element.classList.contains('pending')) return;
@@ -44,6 +48,14 @@ function applyChurn(element: HTMLElement, wordings: number | undefined, tinted: 
     ? `churn-${churnLevel(wordings)}`
     : null;
   for (const name of CHURN_CLASSES) element.classList.toggle(name, name === wanted);
+}
+
+/** A paragraph that is no longer the tracked one goes back to being ordinary page text. */
+function releaseAnswer(element: HTMLElement): void {
+  element.classList.remove('answer', 'ghost', 'reverted', 'loose');
+  element.hidden = false;
+  element.replaceChildren();
+  delete element.dataset.hash;       // so its text is written again from the frame
 }
 
 export function mountPage(root: HTMLElement): PageView {
@@ -70,7 +82,12 @@ export function mountPage(root: HTMLElement): PageView {
 
     const wanted = new Set(frame.blocks.map((block) => block.paraId));
     for (const [paraId, element] of elements) {
-      if (!wanted.has(paraId)) {
+      if (paraId !== model.answerParaId && element.classList.contains('answer')) releaseAnswer(element);
+      if (wanted.has(paraId)) {
+        delete element.dataset.absent;
+      } else if (paraId === model.answerParaId) {
+        element.dataset.absent = '1';     // stays where it was, for the answer view to show as gone
+      } else {
         element.remove();
         elements.delete(paraId);
       }
@@ -84,7 +101,7 @@ export function mountPage(root: HTMLElement): PageView {
         element.dataset.paraId = String(block.paraId);
         elements.set(block.paraId, element);
       }
-      while (cursor !== null && cursor.classList.contains('ghost')) cursor = cursor.nextElementSibling;
+      while (cursor instanceof HTMLElement && cursor.dataset.absent === '1') cursor = cursor.nextElementSibling;
       if (cursor === element) {
         cursor = cursor.nextElementSibling;
       } else {
@@ -102,5 +119,17 @@ export function mountPage(root: HTMLElement): PageView {
     }
   }
 
-  return { update, elementFor: (paraId) => elements.get(paraId) ?? null, blocks };
+  function answerElement(paraId: number): HTMLElement {
+    const existing = elements.get(paraId);
+    if (existing !== undefined) return existing;
+    const element = document.createElement('div');
+    element.className = 'para';
+    element.dataset.paraId = String(paraId);
+    element.dataset.absent = '1';
+    elements.set(paraId, element);
+    blocks.prepend(element);
+    return element;
+  }
+
+  return { update, answerElement, blocks };
 }

@@ -105,9 +105,9 @@ describe('formatting', () => {
     expect(formatSpan(7 * 60_000)).toBe('7 min');
     expect(formatSpan(5 * 3_600_000)).toBe('5 h');
     expect(formatSpan(12 * DAY)).toBe('12 days');
-    expect(formatSpan(1218 * DAY)).toBe('3y 4m');
+    expect(formatSpan(1218 * DAY)).toBe('3y 4mo');
     expect(formatSpan(1096 * DAY)).toBe('3y');
-    expect(formatSpan(90 * DAY)).toBe('3m');
+    expect(formatSpan(90 * DAY)).toBe('3mo');
   });
 
   it('formats dates in UTC', () => {

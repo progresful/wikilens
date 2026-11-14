@@ -7,11 +7,14 @@ import '@fontsource/jetbrains-mono/500.css';
 import './styles.css';
 
 import { ApiError, createApi } from './api';
+import { cleanQuestion } from './question';
 import { createScrubber } from './scrub';
 import { initialState, reduce } from './state';
 import type { Action, AppState } from './state';
-import { formatDate, snapTime, stepTo } from './time';
+import { formatDate, formatSpan, segmentIndexAt, snapTime, stepTo } from './time';
 import type { Frame, Overview } from './types';
+import { mountAnswer } from './views/answer';
+import { mountAsk } from './views/ask';
 import { mountMinimap } from './views/minimap';
 import { mountPage } from './views/page';
 import { mountPicker } from './views/picker';
@@ -21,6 +24,7 @@ import { createWordingCache } from './wordingCache';
 
 const WIKIPEDIA = 'https://fi.wikipedia.org/';
 const DEFAULT_TITLE = 'Talvisota';
+const NO_EXAMPLES: readonly { fi: string; en: string }[] = [];
 
 function must<T extends HTMLElement>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -46,6 +50,17 @@ const credit = must<HTMLElement>('.credit');
 const legend = must<HTMLElement>('#legend');
 
 const pageView = mountPage(must('#page'));
+const answerView = mountAnswer(pageView, must('#page-scroll'), {
+  onJump: (t) => {
+    scrubber.seek(t);
+    syncPlaying();
+  },
+});
+const askView = mountAsk(must('#ask'), {
+  onAsk: (question) => void ask(question),
+  onChip: (paraId) => void track(paraId),
+  onClear: () => dispatch({ type: 'question-cleared' }),
+});
 const minimapView = mountMinimap(must('#minimap'));
 const sqlView = mountSqlPanel(must('#sql'));
 const pickerView = mountPicker(must('#picker'), { onArticle: (pageId) => void openArticle(pageId) });
@@ -124,6 +139,34 @@ async function openArticle(pageId: number): Promise<void> {
   }
 }
 
+async function ask(raw: string): Promise<void> {
+  const question = cleanQuestion(raw);
+  if (question === null) {
+    dispatch({ type: 'ask-failed', message: 'Type a question about this article first (up to 300 characters).' });
+    return;
+  }
+  if (state.pageId === null) return;
+  dispatch({ type: 'asking' });
+  try {
+    const result = await api.ask(state.pageId, question);
+    dispatch({ type: 'asked', question, result });
+    timelineView.track.focus();      // arrows and space now drive the playhead
+  } catch (error: unknown) {
+    dispatch({ type: 'ask-failed', message: message(error) });
+  }
+}
+
+async function track(paraId: number): Promise<void> {
+  if (state.pageId === null) return;
+  try {
+    const segments = await api.paragraphTimeline(state.pageId, paraId);
+    dispatch({ type: 'tracked', paraId, segments });
+    timelineView.track.focus();
+  } catch (error: unknown) {
+    dispatch({ type: 'error', message: message(error) });
+  }
+}
+
 function togglePlay(): void {
   if (scrubber.playing) scrubber.pause();
   else scrubber.play(state.tracked?.segments ?? []);
@@ -174,7 +217,17 @@ function renderLegend(): void {
   }));
 }
 
-/** The line under the date while no question is asked: what the article's history holds. */
+/** The line under the date: what the tracked wording did, or what the article's history holds. */
+function nowLine(): string {
+  const tracked = state.tracked;
+  if (tracked === null) return landingLine();
+  const segment = tracked.segments[segmentIndexAt(tracked.segments, state.time)];
+  if (segment === undefined) return 'before this paragraph was written';
+  const lasted = formatSpan(segment.end - segment.start);
+  if (segment.kind === 'gap') return `no such paragraph in the article for ${lasted}`;
+  return segment.reverted ? `this wording survived ${lasted}` : `this wording stood for ${lasted}`;
+}
+
 function landingLine(): string {
   const article = state.articles.find((candidate) => candidate.pageId === state.pageId);
   if (article === undefined || state.overview === null) return '';
@@ -185,7 +238,7 @@ function render(): void {
   const overview = state.overview;
   nowDate.textContent = state.range === null ? '' : formatDate(state.time);
   bigYear.textContent = state.range === null ? '' : String(new Date(state.time).getUTCFullYear());
-  nowRel.textContent = landingLine();
+  nowRel.textContent = nowLine();
   errorLine.hidden = state.error === null;
   errorLine.textContent = state.error ?? '';
   playButton.textContent = state.playing ? '❚❚' : '▶';
@@ -195,8 +248,15 @@ function render(): void {
   timelineView.update({
     range: state.range, bars: overview?.bars ?? null, segments: state.tracked?.segments ?? [], time: state.time,
   });
-  sqlView.update({
-    sql: state.frame?.sql ?? null, dbMs: state.frame?.dbMs ?? null, count: state.frameCount, note: null,
+  // Right after a question, the panel shows the ranking that answered it; the next frame takes over.
+  const showRanking = state.ask !== null && state.askedAtFrame === state.frameCount;
+  sqlView.update(showRanking && state.ask !== null
+    ? { sql: state.ask.sql, dbMs: state.ask.rankMs, count: state.frameCount, note: 'the question' }
+    : { sql: state.frame?.sql ?? null, dbMs: state.frame?.dbMs ?? null, count: state.frameCount, note: null });
+  const article = state.articles.find((candidate) => candidate.pageId === state.pageId);
+  askView.update({
+    question: state.question, asking: state.asking, message: state.askMessage, ask: state.ask,
+    trackedParaId: state.tracked?.paraId ?? null, examples: article?.questions ?? NO_EXAMPLES,
   });
   if (overview !== null) {
     const churn = state.tracked === null ? overview.churn : null;
@@ -206,6 +266,8 @@ function render(): void {
       wordingsVersion: state.wordingsVersion, churn, answerParaId,
     });
     minimapView.update({ frame: state.frame, cache, wordingsVersion: state.wordingsVersion, churn, answerParaId });
+    const weak = state.ask?.matches.find((match) => match.paraId === answerParaId)?.weak ?? false;
+    answerView.update({ tracked: state.tracked, time: state.time, corpusEnd: overview.corpusEnd, weak });
   }
   renderCredit();
   renderLegend();

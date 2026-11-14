@@ -105,7 +105,8 @@ button { background: none; border: 0; cursor: pointer; }
 .answer-label.loose { background: transparent; color: var(--text); outline: 1px dashed var(--text); }
 .answer-link { color: #9a5a12; text-decoration: underline; text-underline-offset: 3px; }
 .answer-notice { font-family: var(--mono); font-size: 12px; color: #8a2a1c; margin: 2px 0 8px; }
-.answer-notice button { color: #9a5a12; text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
+.first-appearance { font-family: var(--mono); font-size: 12px; color: #8a2a1c; padding: 0 44px; display: block; }
+.first-appearance button { color: #9a5a12; text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
 .pinned-notice { position: sticky; top: 0; z-index: 3; background: #f4eddd; padding: 8px 0; border-bottom: 1px solid var(--paper-2); }
 
 /* ---------- minimap ---------- */

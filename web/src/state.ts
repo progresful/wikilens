@@ -23,6 +23,7 @@ export interface AppState {
   readonly ask: AskResult | null;
   readonly askMessage: string | null;
   readonly tracked: Tracked | null;   // the paragraph whose life is on the timeline
+  readonly askedAtFrame: number | null;   // frames seen when the question was answered: until the next one, the SQL panel shows the ranking
 }
 
 export type Action =
@@ -41,7 +42,7 @@ export type Action =
 
 export const NOTHING_MATCHES = 'Nothing in this article matches that question.';
 
-const NO_QUESTION = { question: '', asking: false, ask: null, askMessage: null, tracked: null } as const;
+const NO_QUESTION = { question: '', asking: false, ask: null, askMessage: null, tracked: null, askedAtFrame: null } as const;
 
 export const initialState: AppState = {
   articles: [],
@@ -81,7 +82,7 @@ export function reduce(state: AppState, action: Action): AppState {
     case 'asked': {
       const best = action.result.matches[0];
       return {
-        ...state, question: action.question, asking: false, ask: action.result,
+        ...state, question: action.question, asking: false, ask: action.result, askedAtFrame: state.frameCount,
         askMessage: best === undefined ? NOTHING_MATCHES : null,
         tracked: best === undefined ? null : { paraId: best.paraId, segments: action.result.timeline },
       };

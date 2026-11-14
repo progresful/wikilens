@@ -61,7 +61,7 @@ def format_duration(delta: timedelta) -> str:
     if days < 60:
         return f"{round(days)} days"
     years, months = divmod(round(days / DAYS_PER_MONTH), 12)
-    return " ".join(part for part in (f"{years}y" if years else "", f"{months}m" if months else "") if part)
+    return " ".join(part for part in (f"{years}y" if years else "", f"{months}mo" if months else "") if part)
 
 
 def _merged(rows: Sequence[HistoryRow], corpus_end: datetime) -> list[_Span]:
