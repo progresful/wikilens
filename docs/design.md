@@ -1,8 +1,8 @@
 # WikiLens: Scrub the Answer — design
 
 **Date:** 14 November 2026
-**Status:** Approved by the owner on 14 November 2026. Nothing is built yet.
-**Source brief:** `~/Downloads/mariadb-junction-2026-challenge-guide.md` (MariaDB "Wikipedia Through Time" challenge, Junction 2026)
+**Status:** Approved by the owner on 14 November 2026, before anything was built. It was then built as written. What was decided afterwards is recorded as amendments at the end (sections 17 to 19); the sections before them are left as they were approved.
+**Source brief:** MariaDB's guide to its "Wikipedia Through Time" challenge, Junction 2026
 
 Throughout this document, **Decided** marks a choice the project owner made in conversation. **Call** marks a choice made by the designer that the owner has seen and not objected to, or has not yet seen. Calls are open to correction.
 
@@ -92,7 +92,7 @@ An estimated one to two million distinct wordings at about 4 KB per vector is se
 
 **Decided:** the "In the article" layout from the mock. The owner compared three layouts in a clickable prototype and chose this one after switching several times between it and the single-passage "Focus" layout.
 
-Reference prototype (invented data, English text): `.superpowers/brainstorm/4395-1794622700/content/scrub-variants-v2.html`, view 2.
+The prototype used invented data and English text. It was a throwaway and is not kept in this repository.
 
 ### 7.1 Layout
 
@@ -340,7 +340,7 @@ All **Calls**. Items marked seen were shown to the owner.
 
 ## 13. Order of work
 
-The plan will detail this. The order matters because each step removes a risk.
+The implementation plan detailed this. The order matters because each step removes a risk.
 
 1. **Prove the query shapes** on a pinned MariaDB with a tiny hand-made fixture: historical insert, `AS OF`, a boundary, the ranking join, a vector index on a plain table.
 2. **One article end to end**, with the round-trip test passing.
@@ -367,6 +367,12 @@ If time runs short, cut in this order: tier 3, tier 2, other-match chips, the he
 ## 15. Left to the builder
 
 Names, file layout, the database driver, any framework inside the browser code, batch sizes, parallelism, similarity and weak-match thresholds (tuned on real data), minimum length for embedding, play speed and dwell times, font bundling, and whether `pos` is a number or a string key. The scrub loop must not go through a per-frame framework re-render.
+
+## 16. Not yet established
+
+- The submission deadline, required format, team size, and whether judges drive the demo. The owner was asked and approved the design without giving them, so the plan uses the stated fallback: due Sunday 15 November in the morning, a repository plus a short video plus the owner presenting live, one person building. These are planning assumptions, not confirmed facts; the owner should check the organisers' instructions.
+- Whether the matcher's results on real articles are good enough to tell true stories. Step 3 answers this.
+- Whether a vector index can sit on a system-versioned table. The design does not depend on it.
 
 ## 17. Amendment, 14 November 2026: Wikipedia's look
 
@@ -432,9 +438,3 @@ frame and paper page of the prototype) and the minimap.
   words lets the reader see when that is all it is.
 - Only articles with vectors get this. A question answered by keyword singles out no wording.
 - A fourth story, read by hand, shows it: the President of Finland's official car.
-
-## 16. Not yet established
-
-- The submission deadline, required format, team size, and whether judges drive the demo. The owner was asked and approved the design without giving them, so the plan uses the stated fallback: due Sunday 15 November in the morning, a repository plus a short video plus the owner presenting live, one person building. These are planning assumptions, not confirmed facts; the owner should check the organisers' instructions.
-- Whether the matcher's results on real articles are good enough to tell true stories. Step 3 answers this.
-- Whether a vector index can sit on a system-versioned table. The design does not depend on it.
