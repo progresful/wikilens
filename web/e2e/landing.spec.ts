@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { clickTrackAt, clickTrackPx, envelope, errorEnvelope } from './helpers';
+import { clickTrackAt, clickTrackPx, envelope, errorEnvelope, QUESTION } from './helpers';
 
 test('opens the fixture article at the corpus end, tinted by churn', async ({ page }) => {
   await page.goto('/');
@@ -209,4 +209,83 @@ test('if another article\'s first frame fails, the previous article\'s text is n
   await expect(page.locator('h1')).toHaveText('Toinen artikkeli');
   await expect(page.locator('.error-line')).toContainText('database unavailable');
   await expect(page.locator('.para')).toHaveCount(0);
+});
+
+// ---- Wikipedia's layout ----
+
+test('the page is laid out like a Wikipedia article, under its own name', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('header.vector-header .wordmark')).toHaveText('WikiLens');
+  await expect(page.locator('.not-wikipedia')).toContainText('not Wikipedia');
+  await expect(page.locator('h1.firstHeading')).toHaveText('Testisota');
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('.tabs-row .tab.selected')).toHaveText(['Article', 'History through time']);
+  await expect(page.locator('a.read-link')).toHaveAttribute('href', 'https://fi.wikipedia.org/?curid=1');
+  await expect(page.locator('.site-sub')).toContainText('From Finnish Wikipedia, as it stood on 1 Oct 2026');
+  expect(await page.locator('img, svg image').count()).toBe(0);            // no logo of anyone's
+});
+
+test('the contents list is the article\'s own headings at the playhead', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.toc-title')).toHaveText('Contents');
+  await expect(page.locator('.toc-item')).toHaveText([/Tausta/]);            // the fixture starts with its heading
+  await clickTrackPx(page, 2);                                    // before the article existed
+  await expect(page.locator('.toc-item')).toHaveCount(0);
+  await clickTrackAt(page, Date.UTC(2013, 5, 15));
+  await expect(page.locator('.site-sub')).toContainText(/as it stood on \d{1,2} Jun 2013/);
+  await expect(page.locator('.toc-item')).toHaveText([/Tausta/]);
+});
+
+test('a contents entry shows how much its section has been reworded, until a question is asked', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.toc-item .toc-heat.heat-3')).toHaveCount(1);     // its most reworded paragraph: four wordings
+  await page.fill('input.question', QUESTION);
+  await page.locator('button.ask-button').click();                             // the button asks, like Enter
+  await expect(page.locator('.answer')).toBeVisible();
+  await expect(page.locator('.toc-item .toc-heat[class*="heat-"]')).toHaveCount(0);
+});
+
+test('the timeline sits between the tabs and the article', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.para.kind-p')).toHaveCount(3);
+  const tabs = await page.locator('.tabs-row').boundingBox();
+  const track = await page.locator('.track').boundingBox();
+  const article = await page.locator('#page').boundingBox();
+  if (tabs === null || track === null || article === null) throw new Error('layout elements missing');
+  expect(track.y).toBeGreaterThan(tabs.y);
+  expect(article.y).toBeGreaterThan(track.y + track.height);
+});
+
+test('choosing a contents entry brings its section to the top of the article', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 470 });      // a short window, so the small fixture article scrolls
+  await page.goto('/');
+  await expect(page.locator('.toc-item')).toHaveText([/Tausta/]);
+  const scroller = page.locator('#page-scroll');
+  const want = await page.locator('.para.kind-h').evaluate((element) => (element as HTMLElement).offsetTop - 8);
+  await scroller.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  expect(await scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(want + 20);
+  await page.locator('.toc-item').click();
+  await expect.poll(async () => Math.abs(await scroller.evaluate((element) => element.scrollTop) - want)).toBeLessThanOrEqual(2);
+  // Measured on screen too, not only by the arithmetic the page itself uses: the heading sits just under the view's top edge.
+  const view = await scroller.boundingBox();
+  const heading = await page.locator('.para.kind-h').boundingBox();
+  if (view === null || heading === null) throw new Error('layout elements missing');
+  expect(heading.y - view.y).toBeGreaterThanOrEqual(0);
+  expect(heading.y - view.y).toBeLessThanOrEqual(30);
+});
+
+test('while a frame\'s texts cannot be loaded, the contents list is marked as not current', async ({ page }) => {
+  await page.route('**/api/articles/1/wordings', (route) =>
+    route.fulfill({ status: 503, json: errorEnvelope('database unavailable') }));     // no texts loaded ahead
+  await page.goto('/');
+  await expect(page.locator('.toc-item')).toHaveText([/Tausta/]);
+  await expect(page.locator('.toc-list')).not.toHaveClass(/pending/);
+  await page.route('**/api/wordings*', (route) => route.fulfill({ status: 503, json: errorEnvelope('database unavailable') }));
+  await clickTrackAt(page, Date.UTC(2010, 6, 1));              // a frame with a wording not seen yet
+  await expect(page.locator('.error-line')).toContainText('database unavailable');
+  await expect(page.locator('.toc-list')).toHaveClass(/pending/);
+  await page.unroute('**/api/wordings*');
+  await clickTrackAt(page, Date.UTC(2011, 6, 1));
+  await expect(page.locator('.toc-list')).not.toHaveClass(/pending/);
+  await expect(page.locator('.toc-item')).toHaveText([/Tausta/]);
 });

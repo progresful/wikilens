@@ -1,12 +1,13 @@
 // Screenshots of the running app, for checking the real-data screen by eye and for the README.
-//   node scripts/screenshot.mjs <out-dir> [url] [question]
+//   node scripts/screenshot.mjs <out-dir> [url] [question] [width]x[height]
 // Needs the API (python -m wikilens.api) and the web server running.
 import { chromium } from '@playwright/test';
 
-const [outDir = 'screenshots', url = 'http://127.0.0.1:5173/', question = ''] = process.argv.slice(2);
+const [outDir = 'screenshots', url = 'http://127.0.0.1:5173/', question = '', size = '1440x900'] = process.argv.slice(2);
+const [width = 1440, height = 900] = size.split('x').map(Number);
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const page = await browser.newPage({ viewport: { width, height } });
 const problems = [];
 page.on('console', (message) => {
   if (message.type() === 'error') problems.push(message.text());

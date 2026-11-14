@@ -23,6 +23,7 @@ export interface AskView {
 }
 
 const CHIP_CHARS = 44;
+const RANKED_NOTE = 'Every wording of 40 or more characters this article has ever had was ranked against the question.';
 
 function button(className: string, text: string, title: string, onClick: () => void): HTMLButtonElement {
   const element = document.createElement('button');
@@ -50,9 +51,13 @@ export function mountAsk(root: HTMLElement, handlers: AskHandlers): AskView {
   input.maxLength = 400;
   input.placeholder = 'Ask this article a question…';
   input.setAttribute('aria-label', 'question about this article');
+  const askButton = button('ask-button', 'Ask', 'ask this article (Enter)', () => handlers.onAsk(input.value));
+  const line = document.createElement('div');
+  line.className = 'question-row';
+  line.append(input, askButton);
   const row = document.createElement('div');
   row.className = 'ask-row';
-  root.replaceChildren(input, row);
+  root.replaceChildren(line, row);
 
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -85,7 +90,9 @@ export function mountAsk(root: HTMLElement, handlers: AskHandlers): AskView {
       nodes.push(button('chip', short, match.preview, () => handlers.onChip(match.paraId)));
     }
     if (ask.mode === 'vector') {
-      nodes.push(span('ask-timing', `this article's whole history ranked (every wording of 40+ characters): embedding ${ask.embedMs.toFixed(0)} ms · MariaDB ${ask.rankMs.toFixed(1)} ms`));
+      const timing = span('ask-timing', `this article's whole history ranked: embedding ${ask.embedMs.toFixed(0)} ms · MariaDB ${ask.rankMs.toFixed(1)} ms`);
+      timing.title = RANKED_NOTE;
+      nodes.push(timing);
     }
     nodes.push(button('clear-question', '× clear', 'clear the question', handlers.onClear));
     return nodes;

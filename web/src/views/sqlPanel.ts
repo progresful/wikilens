@@ -11,12 +11,15 @@ export interface SqlView {
   update(model: SqlModel): void;
 }
 
+const HIDE = 'hide';
+const SHOW = 'show';
+
 export function mountSqlPanel(root: HTMLElement): SqlView {
   root.className = 'sql';
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'sql-toggle';
-  toggle.textContent = 'SQL';
+  toggle.textContent = HIDE;
   toggle.setAttribute('aria-expanded', 'true');
   const text = document.createElement('pre');
   text.className = 'sql-text';
@@ -36,6 +39,7 @@ export function mountSqlPanel(root: HTMLElement): SqlView {
     text.hidden = collapsed;
     stats.hidden = collapsed;
     toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.textContent = collapsed ? SHOW : HIDE;
   });
 
   return {

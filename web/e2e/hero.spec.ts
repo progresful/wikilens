@@ -225,3 +225,11 @@ test('during play with a question, frames are answered and the answer keeps chan
   await page.keyboard.press(' ');
   expect(failures).toEqual([]);
 });
+
+test('the contents list marks the section that holds the answer', async ({ page }) => {
+  await ask(page);
+  await expect(page.locator('.toc-item.has-answer')).toHaveText(/Tausta/);
+  await expect(page.locator('.toc-item.has-answer')).toHaveCount(1);
+  await page.locator('.clear-question').click();
+  await expect(page.locator('.toc-item.has-answer')).toHaveCount(0);
+});

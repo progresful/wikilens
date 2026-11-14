@@ -26,6 +26,8 @@ export interface PageView {
    * paragraph has never been on the page, an element is made for it at the top.
    */
   answerElement(paraId: number): HTMLElement;
+  /** The element of a block that is on the page now, for scrolling to it. */
+  blockElement(paraId: number): HTMLElement | undefined;
   readonly blocks: HTMLElement;
 }
 
@@ -60,14 +62,13 @@ function releaseAnswer(element: HTMLElement): void {
   delete element.dataset.hash;       // so its text is written again from the frame
 }
 
-export function mountPage(root: HTMLElement): PageView {
-  const heading = document.createElement('h1');
+export function mountPage(root: HTMLElement, heading: HTMLElement): PageView {
   const empty = document.createElement('p');
   empty.className = 'page-empty';
   empty.hidden = true;
   const blocks = document.createElement('div');
   blocks.className = 'blocks';
-  root.replaceChildren(heading, empty, blocks);
+  root.replaceChildren(empty, blocks);
 
   const elements = new Map<number, HTMLElement>();
   let last: PageModel | null = null;
@@ -144,5 +145,10 @@ export function mountPage(root: HTMLElement): PageView {
     return element;
   }
 
-  return { update, answerElement, blocks };
+  function blockElement(paraId: number): HTMLElement | undefined {
+    const element = elements.get(paraId);
+    return element === undefined || element.dataset.absent === '1' ? undefined : element;
+  }
+
+  return { update, answerElement, blockElement, blocks };
 }

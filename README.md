@@ -23,6 +23,11 @@ Built for the MariaDB "Wikipedia Through Time" challenge at Junction 2026.
   answer links to its revision on Wikipedia.
 - **Works before you type.** With no question, paragraphs are tinted by how often they have
   been reworded.
+- **It is the article you already know how to read.** The screen follows Wikipedia's own
+  layout: title, tabs, contents list. The timeline is the article's history tab, opened. The
+  contents list is built from the headings at the playhead, so sections appear and vanish as
+  you scrub; it marks the section holding the answer and shows how much each section has
+  been reworded. Changes are drawn in Wikipedia's diff colours.
 
 The text is Finnish (the history dataset is Finnish Wikipedia). Questions can be asked in
 Finnish or English.
@@ -168,6 +173,9 @@ live frame query for each move.
   (MIT, © 2026 MariaDB Foundation; notice in `LICENSES/`), as is the way history rows are
   written with real timestamps.
 - Embeddings: [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3) through Ollama.
-- Fonts: Instrument Serif, Newsreader and JetBrains Mono (SIL Open Font License), bundled.
+- Layout and visual design follow Wikipedia's current skin (Vector 2022), rebuilt in this
+  project's own stylesheet: no Wikimedia stylesheet file is copied, and only system fonts are
+  used. WikiLens is not affiliated with Wikipedia or the Wikimedia Foundation; their logo and
+  wordmark are not used, and the page says it is not Wikipedia.
 
 No licence has been chosen for this repository's own code yet.

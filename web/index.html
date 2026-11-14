@@ -7,49 +7,82 @@
 </head>
 <body>
   <div class="app">
-    <header class="top">
+    <header class="vector-header">
       <div class="brand">
         <span class="wordmark">WikiLens</span>
-        <span class="tagline">Finnish Wikipedia through time · MariaDB system-versioned tables</span>
+        <span class="tagline">Finnish Wikipedia through time</span>
       </div>
-      <div class="top-right">
-        <span class="review-status"></span>
-        <div id="picker"></div>
-        <button class="about-toggle" type="button" aria-expanded="false">about the data</button>
+      <div id="picker" class="header-search"></div>
+      <div class="header-end">
+        <span class="not-wikipedia">An independent demo on MariaDB · not Wikipedia</span>
+        <button class="about-toggle" type="button" aria-expanded="false">About the data</button>
       </div>
     </header>
 
-    <section class="ask" id="ask"></section>
+    <div class="page-container">
+      <nav class="toc" id="toc" aria-label="Contents"></nav>
 
-    <main class="stage">
-      <div class="big-year" aria-hidden="true"></div>
-      <div class="page-scroll" id="page-scroll">
-        <article class="page" id="page" lang="fi"></article>
-      </div>
-      <aside class="minimap" id="minimap" aria-hidden="true"></aside>
-      <aside class="about" id="about" hidden></aside>
-    </main>
+      <main class="main-col">
+        <div class="title-row">
+          <h1 class="firstHeading" lang="fi"></h1>
+          <span class="review-status"></span>
+        </div>
 
-    <footer class="dock">
-      <div class="controls">
-        <div class="transport">
-          <button class="prev" type="button" title="previous change (←)" aria-label="previous change">◀</button>
-          <button class="play" type="button" title="play / pause (space)" aria-label="play" aria-pressed="false">▶</button>
-          <button class="next" type="button" title="next change (→)" aria-label="next change">▶</button>
+        <div class="tabs-row">
+          <div class="tabs">
+            <span class="tab selected">Article</span>
+          </div>
+          <div class="tabs">
+            <a class="tab read-link" target="_blank" rel="noopener">Read on Wikipedia ↗</a>
+            <span class="tab selected">History through time</span>
+          </div>
         </div>
-        <div class="now">
-          <span class="now-date"></span>
-          <span class="now-rel"></span>
+
+        <section class="history-band" aria-label="History through time">
+          <div class="band-top">
+            <div class="ask" id="ask"></div>
+            <div class="controls">
+              <div class="transport">
+                <button class="prev" type="button" title="previous change (←)" aria-label="previous change">◀</button>
+                <button class="play" type="button" title="play / pause (space)" aria-label="play" aria-pressed="false">▶</button>
+                <button class="next" type="button" title="next change (→)" aria-label="next change">▶</button>
+              </div>
+              <div class="now">
+                <span class="now-date"></span>
+                <span class="now-rel"></span>
+              </div>
+            </div>
+          </div>
+          <div class="error-line" role="alert" hidden></div>
+          <div id="timeline"></div>
+        </section>
+
+        <div class="stage">
+          <div class="page-scroll" id="page-scroll">
+            <div class="site-sub"></div>
+            <article class="page" id="page" lang="fi"></article>
+          </div>
+
+          <aside class="rail">
+            <section class="rail-box year-box">
+              <h2 class="rail-title">The article as it stood in</h2>
+              <div class="big-year" aria-hidden="true"></div>
+            </section>
+            <section class="rail-box sql-box">
+              <h2 class="rail-title">MariaDB query behind this view</h2>
+              <div id="sql"></div>
+            </section>
+            <section class="rail-box">
+              <h2 class="rail-title">Timeline key</h2>
+              <div class="legend" id="legend"></div>
+            </section>
+            <div class="credit"></div>
+          </aside>
         </div>
-        <div class="error-line" role="alert" hidden></div>
-        <div id="sql"></div>
-      </div>
-      <div id="timeline"></div>
-      <div class="bottom">
-        <div class="legend" id="legend"></div>
-        <div class="credit"></div>
-      </div>
-    </footer>
+      </main>
+    </div>
+
+    <aside class="about" id="about" hidden></aside>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

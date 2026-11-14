@@ -1,9 +1,4 @@
 // Wiring: the API, the scrub controller, the state, and the views.
-import '@fontsource/instrument-serif/400.css';
-import '@fontsource/instrument-serif/400-italic.css';
-import '@fontsource-variable/newsreader';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/500.css';
 import './styles.css';
 
 import { ApiError, createApi } from './api';
@@ -16,15 +11,18 @@ import type { Frame, Overview } from './types';
 import { mountAbout } from './views/about';
 import { mountAnswer } from './views/answer';
 import { mountAsk } from './views/ask';
-import { mountMinimap } from './views/minimap';
 import { mountPage } from './views/page';
 import { mountPicker } from './views/picker';
 import { mountSqlPanel } from './views/sqlPanel';
 import { mountTimeline } from './views/timeline';
+import { mountToc } from './views/toc';
 import { createWordingCache } from './wordingCache';
 
 const WIKIPEDIA = 'https://fi.wikipedia.org/';
+const SITE_NAME = 'WikiLens';
+const SOURCE_LINE = 'From Finnish Wikipedia';
 const DEFAULT_TITLE = 'Talvisota';
+const SECTION_TOP_MARGIN_PX = 8;
 const NO_EXAMPLES: readonly { fi: string; en: string }[] = [];
 
 function must<T extends HTMLElement>(selector: string): T {
@@ -51,8 +49,10 @@ const errorLine = must<HTMLElement>('.error-line');
 const playButton = must<HTMLButtonElement>('.play');
 const credit = must<HTMLElement>('.credit');
 const legend = must<HTMLElement>('#legend');
+const readLink = must<HTMLAnchorElement>('a.read-link');
+const siteSub = must<HTMLElement>('.site-sub');
 
-const pageView = mountPage(must('#page'));
+const pageView = mountPage(must('#page'), must('h1.firstHeading'));
 const answerView = mountAnswer(pageView, must('#page-scroll'), {
   onJump: (t) => {
     scrubber.seek(t);
@@ -64,7 +64,7 @@ const askView = mountAsk(must('#ask'), {
   onChip: (paraId) => void track(paraId),
   onClear: () => dispatch({ type: 'question-cleared' }),
 });
-const minimapView = mountMinimap(must('#minimap'));
+const tocView = mountToc(must('#toc'), { onSection: scrollToSection });
 const sqlView = mountSqlPanel(must('#sql'));
 const pickerView = mountPicker(must('#picker'), { onArticle: (pageId) => void openArticle(pageId) });
 const timelineView = mountTimeline(must('#timeline'), {
@@ -94,6 +94,17 @@ const scrubber = createScrubber({
 function dispatch(action: Action): void {
   state = reduce(state, action);
   render();
+}
+
+/** Bring a section to the top of the article view; the lead is the top itself. */
+function scrollToSection(headingParaId: number | null): void {
+  if (headingParaId === null) {
+    pageScroll.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  const heading = pageView.blockElement(headingParaId);
+  if (heading === undefined) return;        // the section left the page between drawing the list and the click
+  pageScroll.scrollTo({ top: Math.max(0, heading.offsetTop - SECTION_TOP_MARGIN_PX), behavior: 'smooth' });
 }
 
 function syncPlaying(): void {
@@ -224,11 +235,14 @@ function renderReviewStatus(): void {
       : 'history only · automatic matching, not reviewed';
 }
 
+/** What depends only on which article is open: its links to the real Wikipedia, and the window title. */
 function renderCredit(): void {
   if (state.pageId === null || credit.dataset.pageId === String(state.pageId)) return;
   credit.dataset.pageId = String(state.pageId);
+  readLink.href = `${WIKIPEDIA}?curid=${state.pageId}`;
+  document.title = state.overview === null ? SITE_NAME : `${state.overview.title} – ${SITE_NAME}`;
   const link = document.createElement('a');
-  link.href = `${WIKIPEDIA}?curid=${state.pageId}`;
+  link.href = readLink.href;
   link.target = '_blank';
   link.rel = 'noopener';
   link.textContent = 'the article and its authors';
@@ -236,25 +250,28 @@ function renderCredit(): void {
   credit.replaceChildren('Text: Finnish Wikipedia, CC BY-SA 4.0, simplified · ', link);
 }
 
+// Each entry: the stylesheet class that draws the swatch, and what it stands for.
 const LEGEND_LANDING: readonly (readonly [string, string])[] = [
-  ['#333b45', 'every edit, by month'],
-  ['linear-gradient(90deg, rgba(240,168,58,.12), rgba(229,120,50,.6))', 'paragraph tint: how often it has been reworded'],
+  ['swatch-edits', 'every edit, by month'],
+  ['swatch-heat', 'tint and dots: how often reworded'],
 ];
 const LEGEND_ASKED: readonly (readonly [string, string])[] = [
-  ['#333b45', 'every edit, by month'],
-  ['linear-gradient(90deg, rgba(239,231,214,.25), #efe7d6)', 'one wording of the answer, brighter = later'],
-  ['#e5533b', 'replaced, then reverted'],
-  ['repeating-linear-gradient(135deg, transparent 0 3px, #5b6470 3px 4px)', 'answer missing'],
+  ['swatch-edits', 'every edit, by month'],
+  ['swatch-wording', 'one wording of the answer, darker = later'],
+  ['swatch-reverted', 'replaced, then reverted'],
+  ['swatch-gap', 'answer missing from the article'],
+  ['swatch-added', 'words added'],
+  ['swatch-removed', 'words removed'],
 ];
 
 function renderLegend(): void {
   const mode = state.tracked === null ? 'landing' : 'asked';
   if (legend.dataset.mode === mode) return;
   legend.dataset.mode = mode;
-  legend.replaceChildren(...(mode === 'landing' ? LEGEND_LANDING : LEGEND_ASKED).map(([background, label]) => {
+  legend.replaceChildren(...(mode === 'landing' ? LEGEND_LANDING : LEGEND_ASKED).map(([swatchClass, label]) => {
     const item = document.createElement('span');
     const swatch = document.createElement('i');
-    swatch.style.background = background;
+    swatch.className = swatchClass;
     item.append(swatch, label);
     return item;
   }));
@@ -282,6 +299,7 @@ function render(): void {
   nowDate.textContent = state.range === null ? '' : formatDate(state.time);
   bigYear.textContent = state.range === null ? '' : String(new Date(state.time).getUTCFullYear());
   nowRel.textContent = nowLine();
+  siteSub.textContent = state.frame === null ? SOURCE_LINE : `${SOURCE_LINE}, as it stood on ${formatDate(state.frame.t)}`;
   // While frames fail, the page still shows an earlier moment than the playhead: say so and dim it.
   const stale = state.error !== null && state.frame !== null && state.frame.t !== state.time;
   pageScroll.classList.toggle('stale', stale);
@@ -313,7 +331,7 @@ function render(): void {
       pageId: overview.pageId, title: overview.title, firstTs: overview.firstTs, frame: state.frame, cache,
       wordingsVersion: state.wordingsVersion, churn, answerParaId,
     });
-    minimapView.update({ frame: state.frame, cache, wordingsVersion: state.wordingsVersion, churn, answerParaId });
+    tocView.update({ frame: state.frame, cache, wordingsVersion: state.wordingsVersion, churn, answerParaId });
     const weak = state.ask?.matches.find((match) => match.paraId === answerParaId)?.weak ?? false;
     answerView.update({ tracked: state.tracked, time: state.time, corpusEnd: overview.corpusEnd, weak });
   }

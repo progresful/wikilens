@@ -66,7 +66,7 @@ export function mountPicker(root: HTMLElement, handlers: PickerHandlers): Picker
     input.type = 'search';
     input.setAttribute('list', MORE_LIST_ID);
     input.setAttribute('aria-label', 'find an article loaded with history only');
-    input.placeholder = `${more.length.toLocaleString('en-GB')} more article${more.length === 1 ? '' : 's'}, history only…`;
+    input.placeholder = `Search ${more.length.toLocaleString('en-GB')} more article${more.length === 1 ? '' : 's'}, history only…`;
     input.addEventListener('change', () => {
       const pageId = byTitle.get(input.value);
       if (pageId === undefined) return;

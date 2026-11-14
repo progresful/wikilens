@@ -368,6 +368,29 @@ If time runs short, cut in this order: tier 3, tier 2, other-match chips, the he
 
 Names, file layout, the database driver, any framework inside the browser code, batch sizes, parallelism, similarity and weak-match thresholds (tuned on real data), minimum length for embedding, play speed and dwell times, font bundling, and whether `pos` is a number or a string key. The scrub loop must not go through a per-frame framework re-render.
 
+## 17. Amendment, 14 November 2026: Wikipedia's look
+
+**Decided** by the owner after seeing the built screen: use Wikipedia's layout and visual
+design, with the timeline integrated into it. This replaces section 7.2 item 10 (the dark
+frame and paper page of the prototype) and the minimap.
+
+- The whole screen follows Wikipedia's current skin (Vector 2022): header, title, tabs,
+  contents sidebar, its typography and colours. It is rebuilt in this project's own
+  stylesheet; Wikimedia's stylesheet files (GPL) are not copied.
+- The Wikipedia logo and wordmark are not used: they are Wikimedia trademarks. The page
+  carries its own name and says it is not Wikipedia.
+- **Call** (the owner was offered two placements and did not choose): the timeline sits
+  under the article tabs, as the opened history tab, and stays in view while the article
+  scrolls. The alternative is docking it at the bottom.
+- A contents list built from the article's headings at the playhead replaces the minimap.
+  It changes as the article does, marks the section holding the answer, and shows how
+  much each section has been reworded.
+- Changes are drawn in Wikipedia's own diff colours: blue for added, yellow with a strike
+  for removed; red for a wording that was reverted.
+- The query panel and the timeline key move to the right-hand column.
+- Interface text is English over Finnish article text, as before. No control is decorative:
+  the "Read on Wikipedia" tab opens the real article.
+
 ## 16. Not yet established
 
 - The submission deadline, required format, team size, and whether judges drive the demo. The owner was asked and approved the design without giving them, so the plan uses the stated fallback: due Sunday 15 November in the morning, a repository plus a short video plus the owner presenting live, one person building. These are planning assumptions, not confirmed facts; the owner should check the organisers' instructions.

@@ -10,9 +10,10 @@ Before you present, read the caution about the Talvisota article in `docs/storie
 > A Wikipedia article is the latest of thousands of versions. If you want to know how its
 > answer to one question changed, you read diffs for an afternoon. Here is another way.
 
-The app opens on *Suomettuminen* (Finlandization). The paragraphs are tinted by how often
-each has been reworded: the article shows you where it has been argued over before you type
-anything.
+The app opens on *Suomettuminen* (Finlandization), laid out as the Wikipedia article it is:
+title, tabs, contents list. The opened tab is "History through time". The paragraphs are
+tinted by how often each has been reworded, and the dots in the contents list say the same
+per section: the article shows you where it has been argued over before you type anything.
 
 ## 0:20 Ask once (25 s)
 
@@ -20,7 +21,7 @@ Click the example question **"Who coined the term Finlandization?"** (the articl
 Finnish; the question can be in English).
 
 > I asked once. No dates to pick. The paragraph that answers lights up where it sits in the
-> article, and its whole life is on the timeline: each band is one wording, brighter is
+> article, and its whole life is on the timeline: each band is one wording, darker is
 > later.
 
 Point at the green line under the question: the ranking covered every wording the article
@@ -53,14 +54,14 @@ vandalism in its history is acceptable to show.
 
 ## 2:25 MariaDB is the mechanism (25 s)
 
-Point at the SQL panel while dragging.
+Point at the query box in the right-hand column while dragging.
 
 > Every frame is this query: `FOR SYSTEM_TIME AS OF`. Each paragraph is a row in a
 > system-versioned table, and each edit is a history row carrying the time it was saved on
 > Wikipedia. The timeline is that paragraph's history rows. The question ranks vectors
 > joined to `FOR SYSTEM_TIME ALL`, which is why it finds text that was deleted years ago.
 
-Open **about the data** for the counts, read live from the database.
+Open **About the data** for the counts, read live from the database.
 
 ## 2:50 Close (10 s)
 
