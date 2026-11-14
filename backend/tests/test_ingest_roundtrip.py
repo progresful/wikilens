@@ -154,3 +154,33 @@ def test_checksums(tmp_path):
         verify_checksums(tmp_path, {"versions-01.parquet": "0" * 64})
     with pytest.raises(ChecksumError, match="versions-02.parquet"):
         verify_checksums(tmp_path, {"versions-02.parquet": good})
+
+
+def test_ingest_tolerates_a_wording_committed_by_another_loader_meanwhile(con, monkeypatch):
+    """Two articles loaded at once can share a wording (a common heading). The second loader
+    must not fail because the first committed that wording after its transaction began."""
+    from wikilens.blocks import Block
+    from wikilens.config import load_settings
+    from wikilens.db import connect
+
+    apply_schema(con)
+    other = connect(load_settings(), database="wikilens_test")
+    shared = Block.of("h", "Tausta")
+    real_advance = ingest.advance
+    state = {"done": False}
+
+    def advance_after_other_commit(*args, **kwargs):
+        if not state["done"]:
+            state["done"] = True
+            other.cursor().execute("INSERT INTO wording (hash, kind, text) VALUES (%s, %s, %s)",
+                                   (shared.hash, shared.kind, shared.text))
+            other.commit()
+        return real_advance(*args, **kwargs)
+
+    monkeypatch.setattr(ingest, "advance", advance_after_other_commit)
+    try:
+        report = ingest_page(con, fixture_revisions(), tier=1)
+    finally:
+        other.close()
+    assert report.revisions == 10
+    assert count(con, "SELECT COUNT(*) FROM wording") == 9

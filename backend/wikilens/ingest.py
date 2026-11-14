@@ -21,6 +21,7 @@ from multiprocessing import get_context
 from pathlib import Path
 from typing import Any
 
+import pymysql
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor
 
@@ -37,6 +38,8 @@ log = logging.getLogger(__name__)
 BATCH_BYTES = 8_000_000   # of wording text sent together; the server accepts 64 MB packets
 ROW_BATCH = 5_000
 DATA_DIR = REPO_ROOT / "data" / "m"
+RETRIES = 3
+RETRYABLE_ERRORS = frozenset({1020, 1205, 1213})   # record changed, lock wait timeout, deadlock
 
 _PARAGRAPH_COLUMNS = "page_id, para_id, pos, hash, rev_id, match_rule, similarity, row_start"
 INSERT_WORDING = "INSERT IGNORE INTO wording (hash, kind, text) VALUES (%s, %s, %s)"
@@ -124,11 +127,11 @@ def _write(cur: Cursor, revisions: Sequence[RawRevision], tier: int) -> tuple[in
         open_rows, closed = advance(page_id, open_rows, state, valid_from)
         history.extend(_row_values(row) for row in closed)
         if wording_bytes > BATCH_BYTES or len(history) >= ROW_BATCH:
-            cur.executemany(INSERT_WORDING, wordings)
+            cur.executemany(INSERT_WORDING, sorted(wordings))
             cur.executemany(INSERT_HISTORY, history)
             paragraph_rows += len(history)
             wordings, wording_bytes, history = [], 0, []
-    cur.executemany(INSERT_WORDING, wordings)
+    cur.executemany(INSERT_WORDING, sorted(wordings))
     cur.executemany(INSERT_HISTORY, history)
     cur.executemany(INSERT_CURRENT, [_row_values(row) for row in open_rows.values()])
     cur.executemany(INSERT_REVISION, revision_rows)
@@ -144,7 +147,12 @@ def ingest_page(con: Connection, revisions: Sequence[RawRevision], tier: int) ->
         raise ValueError("an article needs at least one revision")
     started = time.perf_counter()
     page_id = revisions[0].page_id
+    con.rollback()   # start from a clean transaction; nothing of the caller's is pending here
     with con.cursor() as cur:
+        # Loaders run side by side and share wordings (common headings). Under the default
+        # isolation a wording committed by another loader after this transaction began makes
+        # the insert fail with error 1020; READ COMMITTED sees it and ignores the duplicate.
+        cur.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
         cur.execute("SELECT 1 FROM article WHERE page_id = %s", (page_id,))
         if cur.fetchone() is not None:
             raise AlreadyLoaded(f"article {page_id} is already loaded")
@@ -180,6 +188,18 @@ def verify_page(con: Connection, revisions: Sequence[RawRevision], every: int = 
     return len(picks)
 
 
+def _ingest_with_retry(con: Connection, revisions: Sequence[RawRevision], tier: int) -> PageReport:  # pragma: no cover
+    """Lock waits and deadlocks between loaders are transient: the article is tried again."""
+    for attempt in range(RETRIES):
+        try:
+            return ingest_page(con, revisions, tier)
+        except pymysql.err.OperationalError as error:
+            if error.args[0] not in RETRYABLE_ERRORS or attempt == RETRIES - 1:
+                raise
+            log.warning("article %s: %s, trying again", revisions[0].page_id, error.args[1])
+    raise AssertionError("unreachable")
+
+
 def _ingest_file(task: tuple[str, list[int] | None, list[int], int]) -> list[str]:  # pragma: no cover - CLI worker
     """Worker: load the wanted articles of one Parquet file. Returns one log line per article."""
     path, wanted, tier1, verify_every = task
@@ -194,7 +214,7 @@ def _ingest_file(task: tuple[str, list[int] | None, list[int], int]) -> list[str
             if page_id in loaded:
                 lines.append(f"{title}: already loaded, skipped")
                 continue
-            report = ingest_page(con, revisions, tier=1 if page_id in tier1 else 2)
+            report = _ingest_with_retry(con, revisions, tier=1 if page_id in tier1 else 2)
             checked = verify_page(con, revisions, verify_every) if verify_every else 0
             lines.append(
                 f"{report.title}: {report.revisions} revisions, {report.paragraph_rows} paragraph rows, "
