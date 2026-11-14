@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from itertools import pairwise
 
 MIN_GAP = 1e-6
 
@@ -37,6 +38,6 @@ def assign_positions(existing: Sequence[float | None]) -> tuple[list[float], boo
         after = existing[end] if end < len(existing) else None
         positions.extend(_fill(end - i, before, after))
         i = end
-    if any(b - a < MIN_GAP for a, b in zip(positions, positions[1:])):
+    if any(b - a < MIN_GAP for a, b in pairwise(positions)):
         return [float(j + 1) for j in range(len(existing))], True
     return positions, False
