@@ -1,0 +1,24 @@
+# MariaDB for WikiLens. Start:  docker compose up -d --wait
+# Credentials come from .env (copy .env.example and fill in the passwords).
+services:
+  mariadb:
+    # mariadb:lts as pulled on 14 Nov 2026 (MariaDB 12.3.3), pinned so the demo cannot drift
+    image: mariadb@sha256:4ebbcf100a3ba320766dfa0e1af008df12261301db6ef72798c7650f70794aed
+    environment:
+      MARIADB_ROOT_PASSWORD: ${WIKILENS_DB_ROOT_PASSWORD:?set WIKILENS_DB_ROOT_PASSWORD in .env}
+      MARIADB_DATABASE: ${WIKILENS_DB_NAME:-wikilens}
+      MARIADB_USER: ${WIKILENS_DB_USER:?set WIKILENS_DB_USER in .env}
+      MARIADB_PASSWORD: ${WIKILENS_DB_PASSWORD:?set WIKILENS_DB_PASSWORD in .env}
+    command: ["--max-allowed-packet=64M", "--innodb-buffer-pool-size=2G"]
+    ports:
+      - "127.0.0.1:${WIKILENS_DB_PORT:-3309}:3306"   # local only; 3309 avoids the MariaDB starters on 3307 and 3308
+    volumes:
+      - wikilens-data:/var/lib/mysql
+      - ./docker/initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+
+volumes:
+  wikilens-data:
