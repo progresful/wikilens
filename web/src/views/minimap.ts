@@ -18,6 +18,8 @@ export interface MinimapModel {
 }
 
 export interface MinimapHandlers {
+  /** The strip was pressed: the article is about to be moved by hand. */
+  onGrab: () => void;
   /** Bring a block into view: its index in reading order, and how far down it (0 to 1). */
   onJump: (index: number, within: number) => void;
 }
@@ -100,8 +102,10 @@ export function mountMinimap(root: HTMLElement, handlers: MinimapHandlers): Mini
     if (spot !== null) handlers.onJump(spot.index, spot.within);
   };
   map.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;            // the main button only: a context menu is not a drag
     map.setPointerCapture(event.pointerId);
     pressing = true;
+    handlers.onGrab();
     jump(event);
   });
   map.addEventListener('pointermove', (event) => {
@@ -112,6 +116,7 @@ export function mountMinimap(root: HTMLElement, handlers: MinimapHandlers): Mini
   };
   map.addEventListener('pointerup', release);
   map.addEventListener('pointercancel', release);
+  map.addEventListener('lostpointercapture', release);
 
   return {
     update(model) {

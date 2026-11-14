@@ -242,3 +242,24 @@ test('the overview marks where the answer sits, and gives up the tint', async ({
   await expect(page.locator('.mm-bar')).toHaveCount(2);
   await expect(page.locator('.mm-bar.mm-answer')).toHaveCount(0);
 });
+
+test('pressing on the overview while the answer plays stops the play, so the article stays where it was put', async ({ page }) => {
+  await ask(page);
+  await page.keyboard.press(' ');
+  await expect(page.locator('.play')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.mm-bar').first()).toBeAttached();          // the article exists at the playhead
+  await page.locator('.mm-map').click({ position: { x: 12, y: 9 } });
+  await expect(page.locator('.play')).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('only the main mouse button moves the article from the overview', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 470 });      // a short window, so the small fixture article scrolls
+  await page.goto('/');
+  await expect(page.locator('.mm-bar')).toHaveCount(4);
+  const last = await page.locator('.mm-bar').last().boundingBox();
+  if (last === null) throw new Error('the overview has no bars');
+  await page.mouse.click(last.x + 2, last.y + last.height / 2, { button: 'right' });
+  await page.mouse.move(last.x + 2, last.y - 12);                // and no drag was started by it
+  await page.waitForTimeout(150);
+  expect(await page.locator('#page-scroll').evaluate((element) => element.scrollTop)).toBe(0);
+});

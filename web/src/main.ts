@@ -67,7 +67,7 @@ const askView = mountAsk(must('#ask'), {
   onClear: () => dispatch({ type: 'question-cleared' }),
 });
 const tocView = mountToc(must('#toc'), { onSection: scrollToSection });
-const minimapView = mountMinimap(must('#minimap'), { onJump: scrollToBlock });
+const minimapView = mountMinimap(must('#minimap'), { onGrab: stopPlaying, onJump: scrollToBlock });
 const sqlView = mountSqlPanel(must('#sql'));
 const pickerView = mountPicker(must('#picker'), { onArticle: (pageId) => void openArticle(pageId) });
 const timelineView = mountTimeline(must('#timeline'), {
@@ -108,6 +108,13 @@ function scrollToSection(headingParaId: number | null): void {
   const heading = pageView.blockElement(headingParaId);
   if (heading === undefined) return;        // the section left the page between drawing the list and the click
   pageScroll.scrollTo({ top: Math.max(0, heading.offsetTop - SECTION_TOP_MARGIN_PX), behavior: 'smooth' });
+}
+
+/** The article is about to be moved by hand. A play that keeps the answer in view would pull it straight back. */
+function stopPlaying(): void {
+  if (!scrubber.playing) return;
+  scrubber.pause();
+  syncPlaying();
 }
 
 /** Bring a block to the middle of the article view: the overview strip was pressed there. */

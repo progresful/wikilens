@@ -347,3 +347,23 @@ test('pressing on the overview brings that part of the article into view', async
   await page.mouse.click(first.x + 2, first.y + 1);
   await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(0);
 });
+
+for (const width of [1440, 1200, 860]) {
+  test(`at ${width}px wide the about panel opens and closes from the foot, and never covers its own toggle`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('.para.kind-p')).toHaveCount(3);
+    const toggle = page.locator('.page-foot .about-toggle');
+    await expect(toggle).toBeVisible();
+    await expect(page.locator('.page-foot .not-wikipedia')).toBeVisible();
+    await toggle.click();
+    const about = page.locator('.about');
+    await expect(about).toContainText('2 articles');
+    const panel = await about.boundingBox();
+    const button = await toggle.boundingBox();
+    if (panel === null || button === null) throw new Error('layout elements missing');
+    expect(panel.y + panel.height).toBeLessThanOrEqual(button.y);        // the panel ends above the toggle
+    await toggle.click();
+    await expect(about).toBeHidden();
+  });
+}
