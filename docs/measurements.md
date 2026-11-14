@@ -29,3 +29,21 @@ Checked by `backend/tests/test_query_shapes.py` against the server above, on a h
 | Can one article's history be deleted from a versioned table? (`DELETE HISTORY FROM paragraph WHERE page_id = 7`) | **No.** Error 1064, syntax error: `DELETE HISTORY` takes no `WHERE`. Reloading an article therefore means resetting the derived tables (`ingest --reset`) |
 
 Not tested, and not relied on: a vector index on a system-versioned table.
+
+## First real article, 14 November 2026
+
+`python -m wikilens.ingest --pages 1256 --verify-every 25` (Talvisota, one process).
+
+| | |
+|---|---|
+| Dataset M download | 16 Parquet files, 310 MB on disk, all matching `SHA256SUMS`, 38 s |
+| Revisions | 2,143, none without text |
+| Raw wikitext of those revisions | 156.4 MB (sum of the dump's byte counts) |
+| Ingest time | 23.6 s, about 90 revisions per second |
+| Round trip | 87 sampled revisions (first, last, every 25th): the stored article equals the cleaner's output at each one |
+| Paragraphs ever seen | 842 identities, 2,645 distinct wordings |
+| Versioned rows | 4,359 in `paragraph`: 842 new, 1,915 edited, 99 moved, 146 restored, 1,357 opened by a full revert |
+| Size in MariaDB | 5.7 MB: `wording` 3.6, `paragraph` 1.7, `revision` 0.4. About 27 times smaller than the raw text, because only changed paragraphs are stored |
+| Frame query (`FOR SYSTEM_TIME AS OF`), median of 20 | 0.69 ms at 2005-06-01 (52 blocks), 2.19 ms at 2012-06-01 (267 blocks), 2.09 ms at 2026-09-30 (297 blocks) |
+
+Database time only, measured in the Python process around execute and fetch, warm, one connection.

@@ -8,3 +8,13 @@ def test_schema_statements_ignore_comments_containing_semicolons():
 
 def test_schema_statements_of_empty_text():
     assert schema_statements("\n-- only a comment\n") == []
+
+
+def test_schema_exists(con):
+    from wikilens.db import apply_schema, schema_exists
+
+    apply_schema(con)
+    assert schema_exists(con) is True
+    con.cursor().execute("DROP TABLE article")
+    assert schema_exists(con) is False
+    apply_schema(con)

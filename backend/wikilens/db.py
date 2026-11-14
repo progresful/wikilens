@@ -43,6 +43,13 @@ def apply_schema(con: Connection) -> None:
     con.commit()
 
 
+def schema_exists(con: Connection) -> bool:
+    """Whether the tables have been created in this database."""
+    with con.cursor() as cur:
+        cur.execute("SHOW TABLES LIKE 'article'")
+        return cur.fetchone() is not None
+
+
 def enable_history_insert(con: Connection) -> None:
     """Let this session write row_start and row_end itself, so history rows carry the time a
     revision was saved on Wikipedia instead of the time we loaded it."""

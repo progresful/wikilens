@@ -68,6 +68,17 @@ def rank_paragraphs(con: Connection, page_id: int, vector: Sequence[float], limi
         return [(para_id, float(distance)) for para_id, distance in cur.fetchall()]
 
 
+def wordings_by_hash(con: Connection, hashes: Sequence[bytes]) -> dict[bytes, tuple[str, str]]:
+    """hash -> (kind, text) for the hashes that exist."""
+    wanted = list(dict.fromkeys(hashes))
+    if not wanted:
+        return {}
+    marks = ", ".join(["%s"] * len(wanted))
+    with con.cursor() as cur:
+        cur.execute(f"SELECT hash, kind, text FROM wording WHERE hash IN ({marks})", wanted)
+        return {bytes(block_hash): (kind, text) for block_hash, kind, text in cur.fetchall()}
+
+
 def nearest_wordings(con: Connection, vector: Sequence[float], limit: int = 10) -> list[tuple[bytes, float]]:
     with con.cursor() as cur:
         cur.execute(NEAREST_SQL, (vector_literal(vector), limit))
