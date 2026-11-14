@@ -97,3 +97,19 @@ def test_ollama_unreachable_raises():
 def test_ollama_with_no_texts_makes_no_request():
     client = httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(500)))
     assert OllamaEmbedder("http://ollama.test", client=client).embed([]) == []
+
+
+def test_ollama_answer_without_embeddings_raises():
+    for body in ({}, {"embeddings": "nope"}, {"embeddings": [[0.5]], "error": "x"}):
+        client = httpx.Client(transport=httpx.MockTransport(lambda request, body=body: httpx.Response(200, json=body)))
+        if body.get("embeddings") == [[0.5]]:
+            assert OllamaEmbedder("http://ollama.test", client=client).embed(["a"]) == [[0.5]]
+            continue
+        with pytest.raises(EmbedderUnavailable):
+            OllamaEmbedder("http://ollama.test", client=client).embed(["a"])
+
+
+def test_ollama_answer_that_is_not_json_raises():
+    client = httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, text="<html>")))
+    with pytest.raises(EmbedderUnavailable):
+        OllamaEmbedder("http://ollama.test", client=client).embed(["a"])

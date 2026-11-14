@@ -294,3 +294,20 @@ def test_all_wordings_of_an_article_in_one_answer(client):
     assert {entry["kind"] for entry in data.values()} == {"h", "p"}
     assert all(len(block_hash) == 32 for block_hash in data)
     bad(client.get("/api/articles/999/wordings"), 404)
+
+
+def test_absurd_time_is_a_400_not_a_crash(client):
+    bad(client.get("/api/articles/1/at?t=-99999999999999999999999"), 400)
+    bad(client.get("/api/articles/1/at?t=-999999999999999999"), 400)
+
+
+def test_unexpected_error_keeps_the_envelope_and_hides_the_cause():
+    def broken_connection():
+        raise RuntimeError("secret boom")
+
+    app = create_app(SETTINGS, StubEmbedder(), connect=broken_connection)
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        response = test_client.get("/api/articles")
+    assert bad(response, 500) == "something went wrong"
+    assert "secret boom" not in response.text and "RuntimeError" not in response.text
+    assert response.headers["content-type"].startswith("application/json")

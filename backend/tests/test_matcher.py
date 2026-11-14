@@ -128,3 +128,60 @@ def test_memory_passed_in_is_not_altered():
     memory = Memory()
     match_revision(None, P("a"), 1, "s1", memory, 0)
     assert memory == Memory()
+
+
+# --- very long blocks: found when a real article (page 15600) with a 35,000-character paragraph stalled the loader ---
+
+import signal
+import time
+from contextlib import contextmanager
+
+from wikilens.matcher import similarity
+
+LONG = " ".join(f"sana{i % 500}" for i in range(6000))                 # about 40,000 characters in one block
+LONG_EDITED = LONG.replace("sana17 ", "muutettu17 ", 3)
+LONG_OTHER = " ".join(f"muu{i}" for i in range(6000))
+
+
+@contextmanager
+def within(seconds):
+    """Fail instead of hanging if the body takes longer than this."""
+    def too_slow(*_):
+        raise AssertionError(f"took longer than {seconds} s")
+
+    previous = signal.signal(signal.SIGALRM, too_slow)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def test_similarity_of_very_long_texts_is_quick_and_sensible():
+    with within(5):
+        started = time.perf_counter()
+        assert similarity(LONG, LONG_EDITED, 0.5) > 0.95
+        assert similarity(LONG, LONG_OTHER, 0.5) == 0.0
+        assert similarity(LONG, LONG) == 1.0
+        assert time.perf_counter() - started < 2.0
+
+
+def test_an_edit_to_a_very_long_block_keeps_its_identity():
+    with within(5):
+        _, s2 = run(([Block.of("p", LONG), Block.of("p", "b")], "s1"), ([Block.of("p", LONG_EDITED), Block.of("p", "b")], "s2"))
+    assert ids(s2) == [1, 2]
+    assert s2.paras[0].rule == Rule.EDITED
+
+
+def test_medium_long_texts_are_compared_by_word():
+    a = " ".join(f"sana{i}" for i in range(300))                           # about 2,000 characters
+    b = a.replace("sana150", "toinen150")
+    with within(5):
+        assert 0.98 < similarity(a, b, 0.5) < 1.0
+        assert similarity(a, " ".join(f"muu{i}" for i in range(300)), 0.5) == 0.0
+
+
+def test_short_texts_are_still_compared_by_character():
+    assert similarity("Tausta", "Taustaa") > 0.9          # one word each: by word they would share nothing
+    assert similarity("Tausta", "Tausta") == 1.0

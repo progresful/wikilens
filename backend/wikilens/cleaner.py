@@ -5,7 +5,7 @@ Ported from history.py in MariaDB/mariadb-system-versioning-wikipedia, which is
 Copyright (c) 2026 MariaDB Foundation and used under the MIT License. The full notice is in
 LICENSES/mariadb-system-versioning-wikipedia.LICENSE at the repository root.
 
-Changed from the original in three ways:
+Changed from the original:
   - Only matched {{ }} and {| |} pairs are dropped. The original dropped everything after an
     unclosed opener, which reads as "the rest of the page was removed" although Wikipedia
     still showed it.
@@ -14,6 +14,7 @@ Changed from the original in three ways:
   - HTML entities (&nbsp;, &ndash;, ...) are decoded.
   - Lines that are only a link to another language's article are dropped.
   - Parentheses left empty by a removed template are dropped.
+  - A self-closing <ref/> with a slash in its attributes no longer hides the text after it.
 """
 from __future__ import annotations
 
@@ -24,7 +25,9 @@ from wikilens.blocks import Block
 
 _REDIRECT = re.compile(r"\s*#(OHJAUS|REDIRECT|UUDELLEENOHJAUS)\b", re.IGNORECASE)
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
-_REF_EMPTY = re.compile(r"<ref[^>/]*/>")
+# Self-closing <ref name="x" />. The attributes may contain a slash (name="hs/2011"); missing
+# such a tag made the next pattern swallow the text up to a later </ref>.
+_REF_EMPTY = re.compile(r"<ref[^>]*/>")
 _REF = re.compile(r"<ref[^>]*>.*?</ref>", re.DOTALL)
 _FILE_OR_CATEGORY = re.compile(
     r"\[\[(?:Tiedosto|Kuva|File|Image|Luokka|Category):[^\[\]]*(?:\[\[[^\]]*\]\][^\[\]]*)*\]\]"

@@ -76,3 +76,12 @@ def test_parentheses_left_empty_by_a_removed_template_are_dropped():
     assert pairs("Urho Kekkonen ({{IPA|x}}, {{k-sv|y}}) oli presidentti (1956–1982).") == [
         ("p", "Urho Kekkonen oli presidentti (1956–1982).")
     ]
+
+
+def test_self_closing_ref_with_a_slash_in_its_name_does_not_swallow_text():
+    text = 'Eka lause.<ref name="hs/2011" /> Toinen lause jää.\nKolmas kappale.<ref>lähde</ref> Neljäs lause.'
+    assert pairs(text) == [("p", "Eka lause. Toinen lause jää."), ("p", "Kolmas kappale. Neljäs lause.")]
+
+
+def test_named_ref_with_content_is_still_removed_whole():
+    assert pairs('Alku.<ref name="a/b">lähde</ref> Loppu.') == [("p", "Alku. Loppu.")]

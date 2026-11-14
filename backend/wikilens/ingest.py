@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import argparse
 import logging
+import signal
+import sys
 import time
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
@@ -269,6 +271,9 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI
     finally:
         con.close()
     started = time.perf_counter()
+    # Told to stop (kill, Ctrl-C): leave through the pool's cleanup, so no worker is left running
+    # with a transaction open.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     tasks = [(str(path), wanted, tier1 if not args.pages else wanted or [], args.verify_every) for path in files]
     with get_context("spawn").Pool(max(1, args.workers)) as pool:
         loaded = failed = 0

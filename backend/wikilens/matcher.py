@@ -11,7 +11,7 @@ The rules, in order, for each new revision:
 """
 from __future__ import annotations
 
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from difflib import SequenceMatcher
@@ -24,6 +24,8 @@ from wikilens.positions import assign_positions
 EDIT_THRESHOLD = 0.5      # the starter's value for "still the same paragraph"
 RESTORE_THRESHOLD = 0.6   # a reworded paragraph coming back must be closer than a plain edit
 RESTORE_WINDOW = 20       # revisions within which a reworded paragraph may still come back
+CHAR_PRODUCT_LIMIT = 1_000_000   # two texts of up to about 1,000 characters each: compare by character
+WORD_PRODUCT_LIMIT = 250_000     # up to about 500 words each: compare by word; beyond that, by shared words
 
 
 class Rule(IntEnum):
@@ -79,11 +81,29 @@ class _Link:
 
 
 def similarity(a: str, b: str, at_least: float = 0.0) -> float:
-    """Text similarity 0..1. Returns 0.0 early when it cannot reach `at_least`."""
-    matcher = SequenceMatcher(None, a, b, autojunk=False)
-    if matcher.real_quick_ratio() < at_least or matcher.quick_ratio() < at_least:
+    """Text similarity 0..1. Returns 0.0 early when it cannot reach `at_least`.
+
+    Short texts are compared character by character, as the starter does. That comparison
+    grows with the product of the two lengths, and a real article has a 35,000-character
+    paragraph on which it does not finish. So longer texts are compared word by word, and
+    very long ones by the words they share regardless of order."""
+    if a == b:
+        return 1.0
+    if len(a) * len(b) <= CHAR_PRODUCT_LIMIT:
+        matcher = SequenceMatcher(None, a, b, autojunk=False)
+        if matcher.real_quick_ratio() < at_least or matcher.quick_ratio() < at_least:
+            return 0.0
+        return matcher.ratio()
+    words_a, words_b = a.split(), b.split()
+    if not words_a or not words_b:
         return 0.0
-    return matcher.ratio()
+    shared = sum((Counter(words_a) & Counter(words_b)).values())
+    shared_ratio = 2 * shared / (len(words_a) + len(words_b))
+    if shared_ratio < at_least:      # no ordering of the words can score higher than this
+        return 0.0
+    if len(words_a) * len(words_b) <= WORD_PRODUCT_LIMIT:
+        return SequenceMatcher(None, words_a, words_b, autojunk=False).ratio()
+    return shared_ratio
 
 
 def carry_forward(prev: PageState | None, rev_id: int) -> PageState:

@@ -95,6 +95,11 @@ def _install_error_handlers(app: FastAPI) -> None:
         log.error("database error: %s", error)
         return respond(503, "database unavailable")
 
+    @app.exception_handler(Exception)
+    async def unexpected(_: Request, error: Exception) -> JSONResponse:
+        log.error("unexpected error", exc_info=error)
+        return respond(500, "something went wrong")
+
 
 def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Connection] | None = None,
                stories_path: Path | None = None) -> FastAPI:
@@ -148,9 +153,13 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
     def frame(page_id: int = PathParam(ge=1), t: int = Query()) -> dict[str, Any]:
         if t > corpus_end_ms:
             raise InvalidInput("that moment is after the end of the corpus")
+        try:
+            moment = from_ms(t)
+        except OverflowError:
+            raise InvalidInput("that moment is out of range") from None
         with pool.connection() as con:
             require_article(con, page_id)
-            result = queries.frame_at(con, page_id, from_ms(t))
+            result = queries.frame_at(con, page_id, moment)
         return envelope(frame_json(t, result))
 
     @app.get("/api/wordings")

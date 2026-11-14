@@ -41,7 +41,12 @@ class OllamaEmbedder:
             raise EmbedderUnavailable("the embedding service cannot be reached") from error
         if response.status_code != 200:
             raise EmbedderUnavailable(f"the embedding service answered {response.status_code}")
-        vectors: list[list[float]] = response.json()["embeddings"]
+        try:
+            vectors = response.json()["embeddings"]
+        except (ValueError, KeyError, TypeError) as error:
+            raise EmbedderUnavailable("the embedding service sent an unreadable answer") from error
+        if not isinstance(vectors, list) or not all(isinstance(vector, list) for vector in vectors):
+            raise EmbedderUnavailable("the embedding service sent an unreadable answer")
         return vectors
 
 
