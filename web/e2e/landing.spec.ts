@@ -179,12 +179,32 @@ test('a reviewed article and a history-only one say so too', async ({ page }) =>
   await page.route('**/api/articles', (route) => route.fulfill({
     json: envelope([article(1, 'Testisota', 1, true), article(2, 'Toinen artikkeli', 2, false)]),
   }));
+  await page.route('**/api/articles/2/overview', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.data.hasVectors = false;                 // loaded with its history only: no question vectors
+    await route.fulfill({ response, json: body });
+  });
   await page.goto('/');
   await expect(page.locator('.review-status')).toHaveText('story read by hand');
   await page.locator('input.article-search').fill('Toinen artikkeli');
   await page.locator('input.article-search').dispatchEvent('change');
   await expect(page.locator('h1')).toHaveText('Toinen artikkeli');
   await expect(page.locator('.review-status')).toHaveText('history only · automatic matching, not reviewed');
+});
+
+test('an article outside the starter set that was given vectors is not called history only', async ({ page }) => {
+  const article = (pageId: number, title: string, tier: number) => ({
+    pageId, title, revisions: 10, firstTs: Date.UTC(2010, 2, 1), lastTs: Date.UTC(2017, 0, 1), tier, reviewed: false, questions: [],
+  });
+  await page.route('**/api/articles', (route) => route.fulfill({
+    json: envelope([article(1, 'Testisota', 1), article(2, 'Toinen artikkeli', 2)]),
+  }));
+  await page.goto('/');
+  await page.locator('input.article-search').fill('Toinen artikkeli');
+  await page.locator('input.article-search').dispatchEvent('change');
+  await expect(page.locator('h1')).toHaveText('Toinen artikkeli');
+  await expect(page.locator('.review-status')).toHaveText('automatic matching, not reviewed');      // the fixture embeds it
 });
 
 test('while frames fail the page is marked as not current, and unmarked on recovery', async ({ page }) => {

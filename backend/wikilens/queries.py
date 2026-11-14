@@ -33,6 +33,15 @@ GROUP BY p.para_id
 ORDER BY distance, p.para_id
 LIMIT %s"""
 
+# Which wording of each paragraph is closest to the question. It may be one the paragraph stopped
+# having years ago: that is how the page can say "it read like that then, and differently now".
+CLOSEST_SQL = """SELECT p.para_id, p.hash, MIN(VEC_DISTANCE_COSINE(v.embedding, @question)) AS distance
+FROM paragraph FOR SYSTEM_TIME ALL AS p
+JOIN wording_vector AS v ON v.hash = p.hash
+WHERE p.page_id = %s AND p.para_id IN ({marks})
+GROUP BY p.para_id, p.hash
+ORDER BY distance, p.hash"""
+
 # Nearest wordings across all articles, through the vector index.
 NEAREST_SQL = """SELECT hash, VEC_DISTANCE_COSINE(embedding, VEC_FromText(%s)) AS distance
 FROM wording_vector
@@ -76,6 +85,23 @@ def rank_paragraphs(con: Connection, page_id: int, vector: Sequence[float], limi
         cur.execute(SET_QUESTION_SQL, (vector_literal(vector),))
         cur.execute(RANK_SQL, (page_id, limit))
         return [(para_id, float(distance)) for para_id, distance in cur.fetchall()]
+
+
+def closest_wordings(con: Connection, page_id: int, vector: Sequence[float],
+                     para_ids: Sequence[int]) -> dict[int, bytes]:
+    """para_id -> the hash of its wording closest to the question, over the paragraph's whole history."""
+    wanted = list(dict.fromkeys(para_ids))
+    if not wanted:
+        return {}
+    marks = ", ".join(["%s"] * len(wanted))
+    with con.cursor() as cur:
+        cur.execute(SET_QUESTION_SQL, (vector_literal(vector),))
+        cur.execute(CLOSEST_SQL.format(marks=marks), (page_id, *wanted))
+        rows = cur.fetchall()
+    closest: dict[int, bytes] = {}
+    for para_id, block_hash, _ in rows:          # closest first, so a paragraph's first row is its best
+        closest.setdefault(para_id, bytes(block_hash))
+    return closest
 
 
 def wordings_by_hash(con: Connection, hashes: Sequence[bytes]) -> dict[bytes, tuple[str, str]]:

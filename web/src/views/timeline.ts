@@ -7,6 +7,8 @@ export interface TimelineModel {
   bars: Overview['bars'] | null;
   segments: readonly Segment[];
   time: number;
+  /** The wording closest to the question: its stretches of the band are marked. */
+  closestHash: string | null;
 }
 
 export interface TimelineHandlers {
@@ -49,12 +51,13 @@ function barElements(bars: Overview['bars'], range: TimeRange): HTMLElement[] {
   });
 }
 
-function segmentElements(segments: readonly Segment[], range: TimeRange): HTMLElement[] {
+function segmentElements(segments: readonly Segment[], range: TimeRange, closestHash: string | null): HTMLElement[] {
   const tones = Math.max(1, ...segments.map((segment) => segment.tone));
   return segments.map((segment) => {
     const element = div(segment.kind === 'gap' ? 'seg gap' : `seg tone-${segment.tone}`);
     if (segment.reverted) element.classList.add('reverted');
     if (segment.loose) element.classList.add('loose');
+    if (closestHash !== null && segment.hash === closestHash) element.classList.add('closest');
     element.style.left = percent(segment.start, range);
     element.style.width = `${((segment.end - segment.start) / (range.end - range.first)) * 100}%`;
     if (segment.kind === 'wording' && !segment.reverted) {
@@ -132,8 +135,8 @@ export function mountTimeline(root: HTMLElement, handlers: TimelineHandlers): Ti
       bars.replaceChildren(...barElements(model.bars ?? [], range));
       years.replaceChildren(...yearElements(range));
     }
-    if (rangeChanged || last?.segments !== model.segments) {
-      band.replaceChildren(...segmentElements(model.segments, range));
+    if (rangeChanged || last?.segments !== model.segments || last.closestHash !== model.closestHash) {
+      band.replaceChildren(...segmentElements(model.segments, range, model.closestHash));
       ticks.replaceChildren(...tickElements(model.segments, range));
     }
     playhead.style.left = percent(model.time, range);

@@ -172,6 +172,20 @@ def test_ask_finds_a_wording_that_no_longer_exists(client):
     assert "lol" in data["timeline"][2]["text"] and data["timeline"][2]["reverted"] is True
 
 
+def test_ask_names_the_wording_closest_to_the_question_even_when_it_is_gone(client):
+    # "lol" stood for seven minutes in 2012. The paragraph reads differently now, and the answer says which wording matched.
+    data = ok(client.post("/api/articles/1/ask", json={"question": "lol"}))
+    reverted = data["timeline"][2]
+    assert data["matches"][0]["closestHash"] == reverted["hash"]
+    assert data["timeline"][-1]["hash"] != reverted["hash"]
+    assert all(len(match["closestHash"]) == 32 for match in data["matches"])
+
+
+def test_ask_about_the_first_wording_is_matched_to_it_not_to_todays(client):
+    data = ok(client.post("/api/articles/1/ask", json={"question": QUESTION}))
+    assert data["matches"][0]["closestHash"] == data["timeline"][0]["hash"]      # the 2010 wording shares the most words
+
+
 def test_weak_match_is_flagged(client):
     assert ok(client.post("/api/articles/1/ask", json={"question": "xyzzy"}))["matches"][0]["weak"] is True
 
@@ -198,9 +212,10 @@ def test_without_vectors_ask_uses_keyword_mode(client, con):
     con.cursor().execute("DELETE FROM wording_vector")
     con.commit()
     data = ok(client.post("/api/articles/1/ask", json={"question": "marraskuuta"}))
+    assert all(match["closestHash"] is None for match in data["matches"])       # no vectors, so no wording is singled out
     assert data["mode"] == "keyword"
     assert data["matches"][0] == {"paraId": 2, "distance": None, "weak": False,
-                                  "preview": data["matches"][0]["preview"]}
+                                  "preview": data["matches"][0]["preview"], "closestHash": None}
     assert [segment["label"] for segment in data["timeline"]] == LIFE
 
 

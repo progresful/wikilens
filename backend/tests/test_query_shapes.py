@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 
 from wikilens.db import enable_history_insert
-from wikilens.queries import frame_at, nearest_wordings, rank_paragraphs, vector_literal
+from wikilens.queries import closest_wordings, frame_at, nearest_wordings, rank_paragraphs, vector_literal
 
 T = datetime.fromisoformat
 H1, H2, H3 = b"\x01" * 16, b"\x02" * 16, b"\x03" * 16
@@ -80,6 +80,16 @@ def test_rank_over_all_history_finds_a_wording_that_is_gone(con):
     para_id, distance = rank_paragraphs(con, PAGE, unit(0))[0]
     assert para_id == 1
     assert distance == pytest.approx(0.0, abs=1e-6)
+
+
+def test_closest_wording_of_a_paragraph_can_be_one_it_no_longer_has(con):
+    # Paragraph 1 reads H2 today; the question matches H1, which it stopped being in 2012.
+    assert closest_wordings(con, PAGE, unit(0), [1, 2]) == {1: H1, 2: H3}
+    assert closest_wordings(con, PAGE, unit(1), [1]) == {1: H2}
+
+
+def test_closest_wording_of_no_paragraphs_asks_nothing(con):
+    assert closest_wordings(con, PAGE, unit(0), []) == {}
 
 
 def test_vector_index_on_plain_table(con):

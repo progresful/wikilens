@@ -39,6 +39,9 @@ if (question !== '') {
     await page.waitForTimeout(450);
   }
   await page.screenshot({ path: `${outDir}/04-stepped-back.png` });
+  // Back at the end of the corpus: where "then and now" shows, if the closest wording is an old one.
+  await clickTrack(0.9995);
+  await page.screenshot({ path: `${outDir}/05-today.png` });
 }
 
 const stats = await page.evaluate(() => ({

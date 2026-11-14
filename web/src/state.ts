@@ -5,6 +5,8 @@ import type { Article, AskResult, Frame, Overview, Segment, TimeRange } from './
 export interface Tracked {
   readonly paraId: number;
   readonly segments: readonly Segment[];
+  /** The wording closest to the question. It may be one the paragraph no longer has. */
+  readonly closestHash: string | null;
 }
 
 export interface AppState {
@@ -37,7 +39,7 @@ export type Action =
   | { type: 'asking' }
   | { type: 'asked'; question: string; result: AskResult }
   | { type: 'ask-failed'; message: string }
-  | { type: 'tracked'; paraId: number; segments: readonly Segment[] }
+  | { type: 'tracked'; paraId: number; segments: readonly Segment[]; closestHash: string | null }
   | { type: 'question-cleared' };
 
 export const NOTHING_MATCHES = 'Nothing in this article matches that question.';
@@ -84,13 +86,14 @@ export function reduce(state: AppState, action: Action): AppState {
       return {
         ...state, question: action.question, asking: false, ask: action.result, askedAtFrame: state.frameCount,
         askMessage: best === undefined ? NOTHING_MATCHES : null,
-        tracked: best === undefined ? null : { paraId: best.paraId, segments: action.result.timeline },
+        tracked: best === undefined ? null
+          : { paraId: best.paraId, segments: action.result.timeline, closestHash: best.closestHash },
       };
     }
     case 'ask-failed':
       return { ...state, asking: false, askMessage: action.message };
     case 'tracked':
-      return { ...state, tracked: { paraId: action.paraId, segments: action.segments } };
+      return { ...state, tracked: { paraId: action.paraId, segments: action.segments, closestHash: action.closestHash } };
     case 'question-cleared':
       return { ...state, ...NO_QUESTION };
   }

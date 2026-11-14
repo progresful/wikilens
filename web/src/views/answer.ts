@@ -1,5 +1,7 @@
 // The tracked paragraph: its wording at the playhead, drawn from the history already in the
 // browser, so it changes the moment the playhead moves and never waits for the network.
+import { quote, standing, thenAndNow } from '../closest';
+import type { ThenAndNow, WordChange } from '../closest';
 import { tokenize } from '../diff';
 import type { Tracked } from '../state';
 import { formatDate, formatSpan, segmentIndexAt } from '../time';
@@ -32,6 +34,20 @@ interface Parts {
   link: HTMLAnchorElement;
   notice: HTMLElement;
   morph: MorphView;
+  then: ThenParts;
+}
+
+/** "Then and now": the box pointing at the wording closest to the question, and the line pointing back. */
+interface ThenParts {
+  box: HTMLElement;
+  life: HTMLElement;
+  quote: HTMLElement;
+  change: HTMLElement;
+  jump: HTMLButtonElement;
+  here: HTMLElement;
+  later: HTMLElement;
+  laterText: HTMLElement;
+  latest: HTMLButtonElement;
 }
 
 const REVISION_URL = 'https://fi.wikipedia.org/?oldid=';
@@ -47,6 +63,36 @@ function make<K extends keyof HTMLElementTagNameMap>(tag: K, className: string):
 function lifeLine(segment: Segment, corpusEnd: number): string {
   const until = segment.end >= corpusEnd ? 'corpus end' : formatDate(segment.end);
   return `${formatDate(segment.start)} → ${until} · ${formatSpan(segment.end - segment.start)}`;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
+
+function changeLine(change: WordChange | null): string {
+  if (change === null) return 'The paragraph is not in the article at this moment.';
+  if (change.gone === 0 && change.added === 0) return 'The wording shown below differs only in its punctuation.';
+  return `The wording shown below differs: ${plural(change.gone, 'word')} gone, ${change.added} new.`;
+}
+
+/** When the article read like the closest wording: one stretch with its length, or the span of several. */
+function thenLife(found: ThenAndNow, corpusEnd: number): string {
+  if (found.stretches === 1) {
+    return `${lifeLine(found.closest, corpusEnd)}${found.closest.reverted ? ` · ${found.closest.label}` : ''}`;
+  }
+  const until = found.until >= corpusEnd ? 'corpus end' : formatDate(found.until);
+  return `first ${formatDate(found.closest.start)}, last until ${until} · stood ${found.stretches} times`;
+}
+
+/** What became of the closest wording, said from the moment it is on screen; empty when it still stands. */
+function laterLine(closest: Segment, segments: readonly Segment[], corpusEnd: number): string {
+  const last = segments[segments.length - 1];
+  if (last === undefined || last.hash === closest.hash) return '';
+  const { stretches, until } = standing(segments, closest.hash);
+  const stood = stretches > 1 ? `It stood ${stretches} times, last until ${formatDate(until)}.`
+    : `It stood until ${formatDate(until)}.`;
+  const fate = last.kind === 'gap' ? 'is no longer in the article' : 'reads differently';
+  return `${stood} On ${formatDate(corpusEnd)} the paragraph ${fate}.`;
 }
 
 function noticeFor(segment: Segment, corpusEnd: number, weak: boolean): string {
@@ -73,6 +119,53 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
   scroller.prepend(pinned);
   let jumpTo = 0;
   jump.addEventListener('click', () => handlers.onJump(jumpTo));
+  let closestStart = 0;       // where "show the closest wording" goes
+  let latestTime = 0;         // where "show the latest" goes: the end of the corpus
+
+  function buildThen(): ThenParts {
+    const box = make('div', 'closest-match');
+    const head = make('div', 'closest-head');
+    const label = make('span', 'closest-label');
+    label.textContent = 'Closest to your question';
+    const life = make('span', 'closest-life');
+    head.append(label, life);
+    const text = make('blockquote', 'closest-quote');
+    const foot = make('div', 'closest-foot');
+    const change = make('span', 'closest-change');
+    const go = make('button', 'closest-jump');
+    go.type = 'button';
+    go.addEventListener('click', () => handlers.onJump(closestStart));
+    foot.append(change, go);
+    box.append(head, text, foot);
+    const here = make('span', 'closest-here');
+    here.textContent = 'closest to your question';
+    const later = make('div', 'closest-later');
+    const laterText = make('span', 'closest-later-text');
+    const latest = make('button', 'closest-latest');
+    latest.type = 'button';
+    latest.addEventListener('click', () => handlers.onJump(latestTime));
+    later.append(laterText, latest);
+    return { box, life, quote: text, change, jump: go, here, later, laterText, latest };
+  }
+
+  function showThen(parts: ThenParts, found: ThenAndNow | null, segments: readonly Segment[], index: number, model: AnswerModel): void {
+    parts.box.hidden = found === null;
+    if (found !== null) {
+      closestStart = found.closest.start;
+      parts.life.textContent = thenLife(found, model.corpusEnd);
+      parts.quote.textContent = quote(found.closest.text ?? '');
+      parts.change.textContent = changeLine(found.change);
+      parts.jump.textContent = `Show ${formatDate(found.closest.start)}`;
+    }
+    const shown = segments[index];
+    const isClosest = shown !== undefined && shown.kind === 'wording' && shown.hash === model.tracked?.closestHash;
+    const fate = isClosest ? laterLine(shown, segments, model.corpusEnd) : '';
+    parts.here.hidden = !isClosest;
+    parts.later.hidden = fate === '';
+    parts.laterText.textContent = fate;
+    latestTime = model.corpusEnd;
+    parts.latest.textContent = `Show ${formatDate(model.corpusEnd)}`;
+  }
 
   let parts: Parts | null = null;
   let shownSegments: readonly Segment[] | null = null;
@@ -89,11 +182,12 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = 'this revision on Wikipedia ↗';
-    meta.append(label, life, link);
+    const then = buildThen();
+    meta.append(label, then.here, life, link);
     const text = make('div', 'answer-text');
     const notice = make('div', 'answer-notice');
-    element.replaceChildren(meta, text, notice);
-    return { paraId, element, label, life, link, notice, morph: mountMorph(text) };
+    element.replaceChildren(then.box, meta, text, then.later, notice);
+    return { paraId, element, label, life, link, notice, morph: mountMorph(text), then };
   }
 
   function centre(smooth: boolean): void {
@@ -124,6 +218,7 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
     current.link.hidden = revision === null || revision === undefined;
     if (revision !== null && revision !== undefined) current.link.href = `${REVISION_URL}${revision}`;
     current.notice.textContent = noticeFor(segment, model.corpusEnd, model.weak);
+    showThen(current.then, thenAndNow(segments, index, model.tracked?.closestHash ?? null), segments, index, model);
   }
 
   function update(model: AnswerModel): void {

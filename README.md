@@ -9,6 +9,8 @@ Built for the MariaDB "Wikipedia Through Time" challenge at Junction 2026.
 
 ![The article with a question asked: the answer highlighted in place, its history on the timeline](docs/img/03-asked.png)
 
+![Then and now: the wording closest to the question is one the article no longer has; the page says when it read like that](docs/img/05-then-and-now.png)
+
 ![Before any question: paragraphs tinted by how often they have been reworded](docs/img/01-landing.png)
 
 ## What it does
@@ -18,6 +20,11 @@ Built for the MariaDB "Wikipedia Through Time" challenge at Junction 2026.
 - **Finds what was deleted.** The question is ranked against the wordings the article had at
   any time (every paragraph or list item of 40 or more characters; headings and shorter lines
   are not embedded), so an answer that was removed years ago is still found.
+- **Then and now.** The wording that matches your question best may be one the article gave
+  up years ago. The page says when the article read like that, quotes it, counts the words
+  that differ from the wording on screen, and jumps there in a click. Ask *Is the president's
+  official car a Mercedes-Benz?* of *Suomen tasavallan presidentti*: the article said so from
+  2008 until May 2024, and says Audi now.
 - **Shows what happened and no more.** Labels are "first appears", "text changed", "removed",
   "restored unchanged", "replaced, reverted after 7 min". None says why. Each wording of the
   answer links to its revision on Wikipedia.
@@ -101,6 +108,7 @@ ollama pull bge-m3                      # 1.2 GB
 
 .venv/bin/python -m wikilens.ingest --all --workers 8      # downloads the dataset (315 MB), loads all of it; about 9 minutes
 .venv/bin/python -m wikilens.embed --tier1                 # vectors for 50 articles; about 30 minutes on a laptop
+.venv/bin/python -m wikilens.embed --pages 1069            # the fourth story's article; about a minute
 
 scripts/demo.sh                         # builds the page and serves http://127.0.0.1:8000
 ```
@@ -146,9 +154,10 @@ live frame query for each move.
 
 ## Limits
 
-- **Coverage.** Every article of the dataset can be scrubbed. Questions by meaning cover 50
-  articles (the set used by MariaDB's own system-versioning starter), because only those are
-  embedded; the other 19,692 answer by keyword match and say so.
+- **Coverage.** Every article of the dataset can be scrubbed. Questions by meaning cover the
+  articles that are embedded: the 50 used by MariaDB's own system-versioning starter and the
+  fourth story's article. `wikilens.embed --pages` adds any other in about a minute. The
+  rest answer by keyword match and say so, and "then and now" needs vectors.
 - **The corpus ends on 1 October 2026.** Nothing after that is known here, and the timeline
   stops there.
 - **Text is simplified.** Templates, tables and references are not shown, so edits inside

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { clickTrackAt, clickTrackPx, errorEnvelope, QUESTION } from './helpers';
+import { clickTrackAt, clickTrackPx, envelope, errorEnvelope, QUESTION } from './helpers';
 
 // The tracked paragraph of the fixture article lives like this:
 //   2010-03-01 first appears · 2011 text changed · 2012-01-01 10:00 replaced, 10:07 reverted ·
@@ -262,4 +262,72 @@ test('only the main mouse button moves the article from the overview', async ({ 
   await page.mouse.move(last.x + 2, last.y - 12);                // and no drag was started by it
   await page.waitForTimeout(150);
   expect(await page.locator('#page-scroll').evaluate((element) => element.scrollTop)).toBe(0);
+});
+
+// ---- then and now: the wording closest to the question may be one the article no longer has ----
+
+test('a question that matches an old wording says when the article read like that, and that it differs now', async ({ page }) => {
+  await ask(page);                                   // the 2010 wording shares the most words with the question
+  const then = page.locator('.closest-match');
+  await expect(then).toBeVisible();
+  await expect(then.locator('.closest-life')).toHaveText('1 Mar 2010 → 1 Jan 2011 · 10mo');
+  await expect(then.locator('.closest-quote')).toHaveText('Talvisota alkoi marraskuussa 1939, kun Neuvostoliitto hyökkäsi Suomeen.');
+  await expect(then.locator('.closest-change')).toHaveText('The wording shown below differs: 1 word gone, 4 new.');
+  await expect(page.locator('.seg.closest')).toHaveCount(1);
+  await expect(page.locator('.closest-here')).toBeHidden();
+});
+
+test('from today the page jumps to the closest wording, and from there back to today', async ({ page }) => {
+  await ask(page);
+  await page.locator('.closest-jump').click();
+  await expect(page.locator('.now-date')).toHaveText('1 Mar 2010');
+  await expect(page.locator('.closest-match')).toBeHidden();              // the closest wording is the one shown
+  await expect(page.locator('.closest-here')).toBeVisible();
+  await expect(page.locator('.closest-later')).toContainText('It stood until 1 Jan 2011');
+  await expect(page.locator('.closest-later')).toContainText('reads differently');
+  await page.locator('.closest-latest').click();
+  await expect(page.locator('.now-date')).toHaveText('1 Oct 2026');
+  await expect(page.locator('.closest-match')).toBeVisible();
+  await expect(page.locator('.closest-later')).toBeHidden();
+});
+
+test('where the paragraph is out of the article, the closest wording is still pointed to, unstruck', async ({ page }) => {
+  await ask(page);
+  await clickTrackAt(page, Date.UTC(2013, 5, 15));
+  await expect(page.locator('.answer.ghost')).toBeVisible();
+  await expect(page.locator('.closest-change')).toHaveText('The paragraph is not in the article at this moment.');
+  // Only the removed text is struck through and dimmed, not the box that points to the closest wording.
+  await expect(page.locator('.answer.ghost')).toHaveCSS('text-decoration-line', 'none');
+  await expect(page.locator('.answer.ghost')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.answer.ghost .answer-text')).toHaveCSS('text-decoration-line', 'line-through');
+});
+
+test('a question answered by keyword singles out no wording', async ({ page }) => {
+  await page.route('**/api/articles/1/ask', (route) => route.fulfill({ json: envelope({
+    mode: 'keyword', matches: [{ paraId: 2, distance: null, weak: false, preview: 'Talvisota alkoi', closestHash: null }],
+    timeline: [{ kind: 'wording', start: Date.UTC(2010, 2, 1), end: Date.UTC(2026, 9, 1, 23, 59, 59), hash: 'a'.repeat(32),
+      text: 'Talvisota alkoi.', revId: 101, label: 'first appears', tone: 0, loose: false, reverted: false }],
+    embedMs: 0, rankMs: 1, sql: 'SELECT 1',
+  }) }));
+  await ask(page, 'talvisota');
+  await expect(page.locator('.closest-match')).toBeHidden();
+  await expect(page.locator('.closest-here')).toBeHidden();
+  await expect(page.locator('.seg.closest')).toHaveCount(0);
+});
+
+test('a closest wording that came back several times is given with its whole span', async ({ page }) => {
+  // The 2011 wording stood three times: 2011, again after a revert in 2012, and again in 2014 after a removal.
+  await page.route('**/api/articles/1/ask', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.data.matches[0].closestHash = body.data.timeline[1].hash;
+    await route.fulfill({ response, json: body });
+  });
+  await ask(page);
+  await expect(page.locator('.closest-life')).toHaveText('first 1 Jan 2011, last until 1 Jan 2015 · stood 3 times');
+  await expect(page.locator('.seg.closest')).toHaveCount(3);
+  await page.locator('.closest-jump').click();
+  await expect(page.locator('.now-date')).toHaveText('1 Jan 2011');
+  // Said of the wording, not of this one stretch of it, which ended in 2012.
+  await expect(page.locator('.closest-later')).toContainText('It stood 3 times, last until 1 Jan 2015.');
 });

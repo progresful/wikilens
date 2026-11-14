@@ -232,7 +232,8 @@ async function track(paraId: number): Promise<void> {
   try {
     const segments = await api.paragraphTimeline(pageId, paraId);
     if (state.pageId !== pageId) return;
-    dispatch({ type: 'tracked', paraId, segments });
+    const closestHash = state.ask?.matches.find((match) => match.paraId === paraId)?.closestHash ?? null;
+    dispatch({ type: 'tracked', paraId, segments, closestHash });
     timelineView.track.focus();
   } catch (error: unknown) {
     if (state.pageId !== pageId) return;
@@ -260,8 +261,10 @@ function renderReviewStatus(): void {
     return;
   }
   reviewStatus.classList.toggle('reviewed', article.reviewed);
+  // "History only" means the article has no vectors, so its questions are answered by keyword. That is
+  // read from the article itself, not from which set it was loaded with: any article can be embedded later.
   reviewStatus.textContent = article.reviewed ? 'story read by hand'
-    : article.tier === 1 ? 'automatic matching, not reviewed'
+    : state.overview?.hasVectors === true ? 'automatic matching, not reviewed'
       : 'history only · automatic matching, not reviewed';
 }
 
@@ -288,6 +291,7 @@ const LEGEND_LANDING: readonly (readonly [string, string])[] = [
 const LEGEND_ASKED: readonly (readonly [string, string])[] = [
   ['swatch-edits', 'every edit, by month'],
   ['swatch-wording', 'the answer\'s wordings, darker = later'],
+  ['swatch-closest', 'the wording closest to the question'],
   ['swatch-reverted', 'replaced, then reverted'],
   ['swatch-gap', 'answer missing from the article'],
   ['swatch-added', 'words added'],
@@ -343,6 +347,7 @@ function render(): void {
   pickerView.update({ articles: state.articles, pageId: state.pageId });
   timelineView.update({
     range: state.range, bars: overview?.bars ?? null, segments: state.tracked?.segments ?? [], time: state.time,
+    closestHash: state.tracked?.closestHash ?? null,
   });
   // Right after a question, the panel shows the ranking that answered it; the next frame takes over.
   const showRanking = state.ask !== null && state.askedAtFrame === state.frameCount;

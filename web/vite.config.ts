@@ -21,7 +21,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // The pure logic. View and animation code is covered by the browser tests instead.
-      include: ['src/time.ts', 'src/diff.ts', 'src/wordingCache.ts', 'src/api.ts', 'src/scrub.ts', 'src/state.ts', 'src/sections.ts', 'src/minimap.ts'],
+      include: ['src/time.ts', 'src/diff.ts', 'src/wordingCache.ts', 'src/api.ts', 'src/scrub.ts', 'src/state.ts', 'src/sections.ts', 'src/minimap.ts', 'src/closest.ts'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },

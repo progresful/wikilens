@@ -13,7 +13,10 @@ const segment: Segment = {
 };
 const askResult: AskResult = {
   mode: 'vector',
-  matches: [{ paraId: 2, distance: 0.2, weak: false, preview: 'a' }, { paraId: 3, distance: 0.9, weak: true, preview: 'b' }],
+  matches: [
+    { paraId: 2, distance: 0.2, weak: false, preview: 'a', closestHash: 'h' },
+    { paraId: 3, distance: 0.9, weak: true, preview: 'b', closestHash: null },
+  ],
   timeline: [segment], embedMs: 1, rankMs: 2, sql: 'SELECT',
 };
 const opened = reduce(initialState, { type: 'article-opened', pageId: 1, overview, range: { first: 0, end: 100 } });
@@ -49,7 +52,7 @@ describe('reduce', () => {
 
   it('tracks the best match after a question', () => {
     const asked = reduce(opened, { type: 'asked', question: 'Miksi?', result: askResult });
-    expect(asked.tracked).toEqual({ paraId: 2, segments: [segment] });
+    expect(asked.tracked).toEqual({ paraId: 2, segments: [segment], closestHash: 'h' });     // with the wording that matched best
     expect(asked.question).toBe('Miksi?');
     expect(asked.asking).toBe(false);
     expect(asked.askMessage).toBeNull();
@@ -63,8 +66,8 @@ describe('reduce', () => {
 
   it('switches the tracked paragraph', () => {
     const asked = reduce(opened, { type: 'asked', question: 'q', result: askResult });
-    const switched = reduce(asked, { type: 'tracked', paraId: 3, segments: [] });
-    expect(switched.tracked).toEqual({ paraId: 3, segments: [] });
+    const switched = reduce(asked, { type: 'tracked', paraId: 3, segments: [], closestHash: 'x' });
+    expect(switched.tracked).toEqual({ paraId: 3, segments: [], closestHash: 'x' });
     expect(switched.ask).toBe(askResult);
   });
 

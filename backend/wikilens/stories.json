@@ -16,5 +16,11 @@
     "questions": [
       { "fi": "Miten talvisota syttyi?", "en": "How did the Winter War begin?" }
     ]
+  },
+  {
+    "page_id": 1069,
+    "questions": [
+      { "fi": "Onko presidentin virka-auto Mercedes-Benz?", "en": "Is the president's official car a Mercedes-Benz?" }
+    ]
   }
 ]

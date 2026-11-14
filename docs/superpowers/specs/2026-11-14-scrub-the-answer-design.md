@@ -408,6 +408,31 @@ frame and paper page of the prototype) and the minimap.
   empty, so the article is seen to grow as the playhead moves forward. The contents list
   stays as it is, with its per-section dots.
 
+## 19. Amendment, 14 November 2026: then and now
+
+**Asked for** by the owner: a question about something the article used to say should be told
+"it read like that on date X, and reads differently now".
+
+- The ranking already covered every wording an article ever had. What was missing was saying
+  *which* wording matched. The answer now carries, for each matching paragraph, the wording
+  closest to the question over that paragraph's whole history (one more
+  `FOR SYSTEM_TIME ALL` query joined to the vectors).
+- When that wording is not the one at the playhead, a box above the answer says when the
+  article read like that, quotes it, counts the words that differ from the wording shown,
+  and offers a jump to that moment. A wording that was put back more than once is given with
+  its whole span and how many times it stood. Its stretches are marked on the timeline.
+- When the playhead is on that wording, it is labelled as the closest, with when it stopped
+  standing and a jump to the end of the corpus if the paragraph reads differently there.
+- It states what the history shows and nothing more: no claim that the old wording was wrong
+  or the new one right.
+- **Call:** the playhead does not move on its own when a question is asked. The page shows
+  today's wording and points at the old one; the reader chooses to go there.
+- **Call:** which stretch counts as "closest" is the model's ranking of wordings, with no
+  threshold. Two wordings that differ by a comma can be told apart; the count of differing
+  words lets the reader see when that is all it is.
+- Only articles with vectors get this. A question answered by keyword singles out no wording.
+- A fourth story, read by hand, shows it: the President of Finland's official car.
+
 ## 16. Not yet established
 
 - The submission deadline, required format, team size, and whether judges drive the demo. The owner was asked and approved the design without giving them, so the plan uses the stated fallback: due Sunday 15 November in the morning, a repository plus a short video plus the owner presenting live, one person building. These are planning assumptions, not confirmed facts; the owner should check the organisers' instructions.

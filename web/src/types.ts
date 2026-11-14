@@ -38,6 +38,8 @@ export const matchSchema = z.object({
   distance: z.number().nullable(),
   weak: z.boolean(),
   preview: z.string(),
+  // The wording of this paragraph closest to the question, over its whole history; null without vectors.
+  closestHash: z.string().nullable(),
 });
 
 export const askResultSchema = z.object({

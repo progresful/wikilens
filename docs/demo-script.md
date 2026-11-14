@@ -40,7 +40,25 @@ Press **←** a few times, then drag the timeline back to 2006 and press **space
 Say what the labels are: "text changed", "removed", "restored unchanged". They state what
 the history shows and nothing about anyone's intent.
 
-## 1:45 The stronger story (40 s)
+## 1:45 Then and now (30 s)
+
+Choose **Suomen tasavallan presidentti** in the picker and click **"Is the president's
+official car a Mercedes-Benz?"**.
+
+> The answer on screen is today's paragraph: the official car is an Audi A8. But look at the
+> box above it. The wording closest to my question is one the article no longer has: from
+> 2017 to 2023 it read "a black armoured Mercedes-Benz S 600 L Guard". The page tells me it
+> said that then and says something else now, and how many words differ.
+
+Click **Show 20 Mar 2017**: the paragraph is shown as it stood, and the purple stretch on
+the timeline is that wording. Click **Show 1 Oct 2026** to come back.
+
+> I did not search an archive. The question was ranked against every wording this paragraph
+> ever had, in MariaDB, and the answer came with its date.
+
+## 2:15 The stronger story (40 s)
+
+Skip this one if time is short.
 
 Choose **Talvisota** in the picker, click **"How did the Winter War begin?"**, then use
 **←** to step back through 2024 and 2023 only.
@@ -53,7 +71,7 @@ Choose **Talvisota** in the picker, click **"How did the Winter War begin?"**, t
 Do not press play on this article in front of an audience unless you have decided the
 vandalism in its history is acceptable to show.
 
-## 2:25 MariaDB is the mechanism (25 s)
+## 2:55 MariaDB is the mechanism (25 s)
 
 Point at the query box in the right-hand column while dragging.
 
@@ -64,7 +82,7 @@ Point at the query box in the right-hand column while dragging.
 
 Open **About the data** (at the foot of the left column) for the counts, read live from the database.
 
-## 2:50 Close (10 s)
+## 3:20 Close (10 s)
 
 > Fifty articles, every version since 2003, about a millisecond per frame. Wikipedia through
 > time, one question at a time.

@@ -1,6 +1,6 @@
 # Stories read by hand
 
-14 November 2026. Three paragraphs whose histories I read in Finnish, wording by wording, to
+14 November 2026. Four paragraphs whose histories I read in Finnish, wording by wording, to
 check that what the screen shows is what happened. The order below is the order in
 `backend/wikilens/stories.json`, which decides what the app opens on and which example
 questions it offers. **The order is provisional: the project owner has not chosen yet.**
@@ -18,6 +18,7 @@ Distance is cosine distance; lower is closer.
 | Suomettuminen | Kuka keksi käsitteen suomettuminen? / Who coined the term Finlandization? | yes / yes | 0.397 / 0.410 |
 | Lapuanliike | Mikä lapuanliike oli? / What was the Lapua Movement? | yes / yes | 0.301 / 0.352 |
 | Talvisota | Miten talvisota syttyi? / How did the Winter War begin? | yes / yes | 0.306 / 0.356 |
+| Suomen tasavallan presidentti | Onko presidentin virka-auto Mercedes-Benz? / Is the president's official car a Mercedes-Benz? | yes / yes | 0.280 / 0.299 |
 
 Phrasings that put the intended paragraph second, not first: "Why did the Winter War start?"
 (a paragraph on the world's condemnation of the attack came first) and "Mistä käsite
@@ -119,6 +120,47 @@ One labelling detail: on 4 Dec 2019 a two-step vandal edit was undone in one ste
 screen says "text changed", "text changed", "restored unchanged". That is what the rows show;
 the "replaced, reverted" label is only given to a single wording that sat between two
 identical ones.
+
+## 4. Suomen tasavallan presidentti: is the official car a Mercedes-Benz?
+
+The "then and now" story: the question is about something the article said for sixteen years
+and no longer says. The paragraph on the president's car, boat and train; 26 segments from
+2008 to 2024. This article is outside the starter's 50, so it has to be embedded
+(`python -m wikilens.embed --pages 1069`).
+
+- **13 Jul 2008** ([5101150](https://fi.wikipedia.org/?oldid=5101150)): first appears. "The
+  President of the Republic's current official car is a black armoured Mercedes-Benz S 600 L
+  Guard", then the boat Kultaranta VIII and the saloon railway carriage.
+- **16 Dec 2008**: "600" is changed to "60009" and reverted after 19 hours. Between 2008 and
+  2010 otherwise spelling fixes, and in 2009 sentences on the railway carriages and on
+  helicopters.
+- **21 Jan 2014**, **14 Sep 2016**, **16 May 2019**: the paragraph is out of the article for a
+  minute or two each time and comes back unchanged.
+- **11 Feb 2014** ([13859113](https://fi.wikipedia.org/?oldid=13859113)): two sentences are
+  added: the president uses the car rarely, mostly on state visits; the coat of arms has
+  been its registration plate since 1925.
+- **1 Jul 2014**: replaced for seven minutes by a paragraph on whether the presidency should
+  be abolished, then put back.
+- **20 Mar 2017** ([16362932](https://fi.wikipedia.org/?oldid=16362932)): added: the
+  President's Office also has an Audi A8L Security from 2012.
+- **24 May 2024** ([22406696](https://fi.wikipedia.org/?oldid=22406696)): the Mercedes is
+  gone. "The official car is at present an Audi A8 L Security Quattro"; the 2012 Audi is now
+  said to be for former presidents.
+
+What the screen says for the question, at the end of the corpus: the paragraph shown is the
+Audi wording, and the box above it points to the closest wording. Asked in Finnish that is
+the wording of 11 Feb 2014 (it stood three times, last until 20 Mar 2017); asked in English
+it is the wording of 20 Mar 2017 (twice, last until 14 Jul 2023). Both are Mercedes wordings.
+The neutral question "Mikä on presidentin virka-auto?" also matches the 2014 wording most
+closely, not today's: the box says which wording matched, not which is true.
+
+Only this paragraph was read. Other paragraphs of the article have vandalism in their
+histories (in 2008 and 2009 at least), which shows for a moment if the whole timeline is
+played. Two other articles were embedded while looking for this story and are not stories:
+*Sauli Niinistö* (its opening paragraph changes from "is the 12th President" to "served as
+President 2012–2024", but its history is full of crude vandalism about a living person) and
+*Suomen Nato-jäsenhakemus* (asking "Pääseekö Ruotsi Natoon?" finds the 2023 wording saying
+Sweden cannot get in for now, against today's "Sweden's membership was delayed").
 
 ## What was tuned
 

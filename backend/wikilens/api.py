@@ -60,6 +60,7 @@ WEB_DIST = REPO_ROOT / "web" / "dist"
 
 
 Ranked = list[tuple[int, float | None]]   # (para_id, distance); distance is None in keyword mode
+Closest = dict[int, bytes]                # para_id -> the hash of its wording closest to the question
 
 
 class NotFound(Exception):
@@ -118,13 +119,13 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
             raise NotFound("no such article")
         known_articles.add(page_id)
 
-    def matches_for(con: Connection, page_id: int, question: str) -> tuple[str, Ranked, float, float]:
-        """(mode, [(para_id, distance)], embed ms, rank ms)."""
+    def matches_for(con: Connection, page_id: int, question: str) -> tuple[str, Ranked, Closest, float, float]:
+        """(mode, [(para_id, distance)], {para_id: closest wording}, embed ms, rank ms)."""
         found: Ranked
         if not queries.has_vectors(con, page_id):
             started = time.perf_counter()
             found = [(para_id, None) for para_id in queries.keyword_paragraphs(con, page_id, question, MATCHES)]
-            return "keyword", found, 0.0, (time.perf_counter() - started) * 1000
+            return "keyword", found, {}, 0.0, (time.perf_counter() - started) * 1000
         started = time.perf_counter()
         (vector,) = embedder.embed([question])
         if len(vector) != DIMENSIONS:
@@ -132,7 +133,9 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
         embedded = time.perf_counter()
         found = [(para_id, distance) for para_id, distance in queries.rank_paragraphs(con, page_id, vector, MATCHES)]
         done = time.perf_counter()
-        return "vector", found, (embedded - started) * 1000, (done - embedded) * 1000
+        # Not part of the ranking time shown on screen: that figure is for the statement shown with it.
+        closest = queries.closest_wordings(con, page_id, vector, [para_id for para_id, _ in found])
+        return "vector", found, closest, (embedded - started) * 1000, (done - embedded) * 1000
 
     @app.get("/api/articles")
     def articles() -> dict[str, Any]:
@@ -181,11 +184,12 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
         question = clean_question(body.question)
         with pool.connection() as con:
             require_article(con, page_id)
-            mode, found, embed_ms, rank_ms = matches_for(con, page_id, question)
+            mode, found, closest, embed_ms, rank_ms = matches_for(con, page_id, question)
             histories = [queries.paragraph_history(con, page_id, para_id) for para_id, _ in found]
         matches = [
             {"paraId": para_id, "distance": distance, "weak": distance is not None and distance >= WEAK_DISTANCE,
-             "preview": history[-1].text[:PREVIEW_CHARS] if history else ""}
+             "preview": history[-1].text[:PREVIEW_CHARS] if history else "",
+             "closestHash": closest[para_id].hex() if para_id in closest else None}
             for (para_id, distance), history in zip(found, histories, strict=True)
         ]
         timeline = build_timeline(histories[0], settings.corpus_end) if histories else []

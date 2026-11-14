@@ -151,3 +151,10 @@ The frame timings below are taken at random moments of random articles across al
 Database and model time only, measured in the Python process, warm, one connection.
 Network, JSON and browser time are not included.
 <!-- measured by wikilens.measure: end -->
+
+## After these measurements
+
+Three more articles were embedded on 14 November 2026 while looking for a "then and now"
+story: *Suomen tasavallan presidentti* (1,042 wordings), *Sauli Niinistö* (1,171) and
+*Suomen Nato-jäsenhakemus* (265). The database then held 34,985 vectors. The figures above
+were not measured again. The loading steps in the README embed only the first of the three.

@@ -20,6 +20,7 @@
   --added: #a3d3ff;             /* Wikipedia's diff colours */
   --removed: #ffe49c;
   --heat: 255, 204, 51;         /* how often a paragraph was reworded, in steps of one yellow */
+  --then: #6a60b0;              /* the wording closest to the question: Wikipedia's visited-link purple */
   --heat-strong: #edab00;
   --heat-edge: #ab7f2a;
   --notice: #fdf2d5;
@@ -132,6 +133,11 @@ a:hover { text-decoration: underline; }
 .seg { position: absolute; top: 0; bottom: 0; min-width: 2px; background: var(--link); box-shadow: inset -1px 0 0 var(--surface); }
 .seg.reverted { min-width: 3px; z-index: 2; background: var(--red); box-shadow: 0 0 0 1px var(--surface); }
 .seg.gap { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--placeholder) 4px 5px); box-shadow: none; }
+/* The wording closest to the question: never faded, and flagged above the band. */
+.seg.closest { z-index: 1; opacity: 1 !important; }
+.seg.closest:not(.reverted) { background: var(--then); }
+.seg.closest::before { content: ''; position: absolute; left: -4px; top: -9px; border: 4px solid transparent; border-top: 7px solid var(--then);
+  border-bottom: 0; }
 .ticks { position: absolute; inset: 0; pointer-events: none; }
 .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(51, 102, 204, 0.3); }
 .tick.reverted { background: var(--red); }
@@ -170,10 +176,13 @@ a:hover { text-decoration: underline; }
 
 /* ---------- the answer ---------- */
 .para.answer { margin-top: 8px; margin-bottom: 8px; padding-top: 10px; padding-bottom: 10px; font-size: 19px; line-height: 1.55;
-  background: var(--answer); border-left-color: var(--link); transition: opacity 0.35s; }
+  background: var(--answer); border-left-color: var(--link); }
+.answer-text { transition: opacity 0.35s; }
 .para.answer.reverted { background: var(--red-subtle); border-left-color: var(--red); }
-.para.answer.ghost { opacity: 0.45; text-decoration: line-through; text-decoration-color: rgba(32, 33, 34, 0.45);
-  border-left-color: var(--border); background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(0, 0, 0, 0.04) 8px 16px); }
+/* Out of the article at this moment: only its text is struck and dimmed, so what is said about it stays readable. */
+.para.answer.ghost { border-left-color: var(--border);
+  background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(0, 0, 0, 0.04) 8px 16px); }
+.para.answer.ghost .answer-text { opacity: 0.45; text-decoration: line-through; text-decoration-color: rgba(32, 33, 34, 0.45); }
 .w.ins { animation: arrive 0.7s ease both; background: var(--added); }
 .w.del { animation: vanish 0.8s ease forwards; background: var(--removed); text-decoration: line-through; }
 @keyframes arrive { 0% { opacity: 0; font-size: 0; } 40% { opacity: 0.3; font-size: 1em; } 100% { opacity: 1; font-size: 1em; } }
@@ -184,6 +193,20 @@ a:hover { text-decoration: underline; }
   white-space: nowrap; }
 .answer-label.reverted, .answer-label.gap { background: var(--red); }
 .answer-label.loose { color: var(--text); background: transparent; outline: 1px dashed var(--text); }
+/* Then and now: the wording closest to the question may be one the article no longer has. */
+.closest-match { margin-bottom: 10px; padding: 8px 12px 9px; font-size: 13px; line-height: 1.5; color: var(--subtle);
+  background: var(--surface); border: 1px solid var(--border-subtle); border-left: 4px solid var(--then); }
+.closest-head, .closest-foot, .closest-later { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.closest-label { font-weight: 700; color: var(--then); }
+.closest-quote { margin: 4px 0 6px; font-size: 16px; line-height: 1.5; color: var(--text); }
+.closest-quote::before { content: '“'; }
+.closest-quote::after { content: '”'; }
+.closest-jump, .closest-latest { padding: 2px 10px; font-size: 13px; font-weight: 700; line-height: 20px; color: var(--text);
+  background: var(--neutral); border: 1px solid var(--border); border-radius: 2px; white-space: nowrap; }
+.closest-jump:hover, .closest-latest:hover { background: var(--surface); border-color: var(--text); }
+.closest-here { padding: 1px 7px; font-size: 12px; font-weight: 700; color: var(--then); border: 1px solid var(--then); border-radius: 2px;
+  white-space: nowrap; }
+.closest-later { margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--subtle); }
 .answer-notice { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--red); }
 .answer-notice:empty { display: none; }
 .pinned-notice { position: sticky; top: 0; z-index: 3; margin-top: 8px; padding: 6px 12px; font-size: 14px; background: var(--notice);
@@ -234,6 +257,7 @@ a:hover { text-decoration: underline; }
 .swatch-edits { background: var(--border); }
 .swatch-heat { background: linear-gradient(90deg, rgba(var(--heat), 0.1), rgba(var(--heat), 0.9)); }
 .swatch-wording { background: linear-gradient(90deg, rgba(51, 102, 204, 0.25), var(--link)); }
+.swatch-closest { background: var(--then); }
 .swatch-reverted { background: var(--red); }
 .swatch-gap { background: repeating-linear-gradient(135deg, transparent 0 3px, var(--placeholder) 3px 4px); }
 .swatch-added { background: var(--added); }
