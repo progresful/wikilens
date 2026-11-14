@@ -164,3 +164,18 @@ test('play runs through the answer\'s life to the corpus end and stops', async (
   await expect(page.locator('.answer-label')).toHaveText('text changed');
   await expect(page.locator('.play')).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('an article without vectors asks by keyword and says so', async ({ page }) => {
+  await page.route('**/api/articles/1/ask', async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.data.mode = 'keyword';
+    body.data.matches = body.data.matches.map((match: { distance: number | null; weak: boolean }) => ({
+      ...match, distance: null, weak: false,
+    }));
+    await route.fulfill({ response, json: body });
+  });
+  await ask(page, 'marraskuuta');
+  await expect(page.locator('.mode-keyword')).toHaveText('keyword match');
+  await expect(page.locator('.ask-timing')).toHaveCount(0);        // no vector ranking was done, so none is claimed
+});
