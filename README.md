@@ -35,6 +35,9 @@ Built for the MariaDB "Wikipedia Through Time" challenge at Junction 2026.
   contents list is built from the headings at the playhead, so sections appear and vanish as
   you scrub; it marks the section holding the answer and shows how much each section has
   been reworded. Changes are drawn in Wikipedia's diff colours.
+- **On a phone too.** One column: the question and the timeline stay on screen, the article
+  scrolls under them, and the query, the key and the credits follow the article's text. The
+  contents list and the overview strip, which need width, are left out.
 - **The whole article at a glance.** A strip beside the text draws every paragraph as a bar,
   tinted by how often it was reworded, with the answer marked and a box over the part in
   view. Press or drag on it to move. Play the timeline and the strip grows with the article.

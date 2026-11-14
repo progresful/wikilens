@@ -1,5 +1,5 @@
 // The timeline: every edit as faint bars, the answer's wordings as a band, and the playhead.
-import { timeToX } from '../time';
+import { timeToX, yearLabelStep } from '../time';
 import type { Overview, Segment, TimeRange } from '../types';
 
 export interface TimelineModel {
@@ -22,7 +22,6 @@ export interface TimelineView {
 }
 
 const MONTH_MS = 30.44 * 86_400_000;
-const MAX_YEAR_LABELS = 12;
 
 function div(className: string): HTMLDivElement {
   const element = document.createElement('div');
@@ -78,10 +77,10 @@ function tickElements(segments: readonly Segment[], range: TimeRange): HTMLEleme
   });
 }
 
-function yearElements(range: TimeRange): HTMLElement[] {
+function yearElements(range: TimeRange, widthPx: number): HTMLElement[] {
   const firstYear = new Date(range.first).getUTCFullYear();
   const lastYear = new Date(range.end).getUTCFullYear();
-  const step = Math.max(1, Math.ceil((lastYear - firstYear + 1) / MAX_YEAR_LABELS));
+  const step = yearLabelStep(lastYear - firstYear + 1, widthPx);
   const labels: HTMLElement[] = [];
   for (let year = firstYear; year <= lastYear; year += step) {
     const label = document.createElement('span');
@@ -126,14 +125,24 @@ export function mountTimeline(root: HTMLElement, handlers: TimelineHandlers): Ti
   track.addEventListener('pointercancel', stop);
 
   let last: TimelineModel | null = null;
+  let width = 0;                 // of the track, kept from its last resize so drawing reads no layout
+
+  // A narrower timeline (a phone, a turned tablet) has room for fewer year labels.
+  new ResizeObserver(() => {
+    const measured = track.clientWidth;
+    if (measured === width) return;
+    width = measured;
+    if (last !== null && last.range !== null) years.replaceChildren(...yearElements(last.range, width));
+  }).observe(track);
 
   function update(model: TimelineModel): void {
     const range = model.range;
     if (range === null) return;
     const rangeChanged = last === null || last.range !== range;
     if (rangeChanged || last?.bars !== model.bars) {
+      if (width === 0) width = track.clientWidth;      // the first draw can come before the first resize is reported
       bars.replaceChildren(...barElements(model.bars ?? [], range));
-      years.replaceChildren(...yearElements(range));
+      years.replaceChildren(...yearElements(range, width));
     }
     if (rangeChanged || last?.segments !== model.segments || last.closestHash !== model.closestHash) {
       band.replaceChildren(...segmentElements(model.segments, range, model.closestHash));

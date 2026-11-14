@@ -382,8 +382,15 @@ for (const width of [1440, 1200, 860]) {
     const panel = await about.boundingBox();
     const button = await toggle.boundingBox();
     if (panel === null || button === null) throw new Error('layout elements missing');
-    expect(panel.y + panel.height).toBeLessThanOrEqual(button.y);        // the panel ends above the toggle
-    await toggle.click();
+    expect(panel.x).toBeGreaterThanOrEqual(0);
+    expect(panel.x + panel.width).toBeLessThanOrEqual(width);
+    if (width > 900) {
+      expect(panel.y + panel.height).toBeLessThanOrEqual(button.y);      // the panel ends above the toggle
+      await toggle.click();
+    } else {
+      await page.locator('.about-close').click();                        // a sheet over the page, with its own way out
+    }
     await expect(about).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 }

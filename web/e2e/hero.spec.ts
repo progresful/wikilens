@@ -377,3 +377,25 @@ test('once the reader has scrolled away by hand, a change of size does not pull 
   expect(Math.abs(await scroller.evaluate((element) => element.scrollTop) - left)).toBeLessThan(60);
   expect(await answerFullyInView(page)).toBe(false);
 });
+
+test('after a long glide to a far-away answer, the answer ends exactly where it should', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.para.kind-p')).toHaveCount(3);
+  // A long article: the answer is thousands of pixels down, so the glide to it takes its time, and
+  // there is enough below it for the answer to be brought to the middle of the view.
+  await page.evaluate(() => {
+    (document.querySelector('.para.kind-h') as HTMLElement).style.minHeight = '9000px';
+    (document.querySelector('#page') as HTMLElement).style.paddingBottom = '1500px';
+  });
+  await page.fill('input.question', QUESTION);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.answer')).toBeVisible();
+  const offCentre = (): Promise<number> => page.evaluate(() => {
+    const view = document.querySelector('#page-scroll')!.getBoundingClientRect();
+    const answer = document.querySelector('.para.answer')!.getBoundingClientRect();
+    return Math.abs((answer.top + answer.bottom) / 2 - (view.top + view.bottom) / 2);
+  });
+  await expect.poll(offCentre, { timeout: 6000 }).toBeLessThanOrEqual(3);
+  await page.waitForTimeout(900);                    // and it stays there once everything has settled
+  expect(await offCentre()).toBeLessThanOrEqual(3);
+});

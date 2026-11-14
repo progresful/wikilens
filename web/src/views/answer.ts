@@ -59,7 +59,7 @@ interface ThenParts {
 
 const REVISION_URL = 'https://fi.wikipedia.org/?oldid=';
 const TOP_MARGIN_PX = 12;
-const GLIDE_MS = 700;          // how long the page takes to glide to a newly asked answer
+const GLIDE_LIMIT_MS = 2500;   // a glide that has not reported its end by now is taken to be over
 const WEAK_NOTICE = 'weak match: nothing in this article matches the question well; this is the closest paragraph.';
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
@@ -181,8 +181,21 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
   let shownTokens: readonly string[] | null = null;
   let lastTime: number | null = null;
   let held = false;            // the view is where this code put it, not where the reader did
-  let glidingUntil = 0;
-  let settleLater: number | null = null;
+  let gliding = false;         // the page is on its way to a newly asked answer
+  let settleWanted = false;    // something changed size during the glide
+  let glideLimit: number | null = null;
+
+  // A glide across a long article takes as long as the browser decides. Correcting the position
+  // while it is still under way leaves the view tens of pixels off, so a correction asked for during
+  // a glide waits until the browser says the scrolling has ended.
+  function glideEnded(): void {
+    if (!gliding) return;
+    gliding = false;
+    if (glideLimit !== null) window.clearTimeout(glideLimit);
+    glideLimit = null;
+    if (settleWanted) settle();
+  }
+  scroller.addEventListener('scrollend', glideEnded);
 
   // Anything the reader does to the article with a hand takes it out of this code's keeping.
   const byHand = (): void => {
@@ -214,23 +227,20 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
     // Centre the answer; if it is taller than the view, show its top, where its label is.
     const room = scroller.clientHeight - parts.element.offsetHeight;
     const top = parts.element.offsetTop - (room > 2 * TOP_MARGIN_PX ? room / 2 : TOP_MARGIN_PX);
-    scroller.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'instant' });
+    const target = Math.max(0, top);
+    // A glide only when there is somewhere to go: no scrolling means no end of scrolling to wait for.
+    gliding = smooth && Math.abs(scroller.scrollTop - target) > 1;
+    settleWanted = false;
+    if (glideLimit !== null) window.clearTimeout(glideLimit);
+    glideLimit = gliding ? window.setTimeout(glideEnded, GLIDE_LIMIT_MS) : null;   // for browsers that never say
+    scroller.scrollTo({ top: target, behavior: smooth ? 'smooth' : 'instant' });
     held = true;
-    if (smooth) glidingUntil = performance.now() + GLIDE_MS;
   }
 
   function settle(): void {
     if (!held || parts === null) return;
-    const wait = glidingUntil - performance.now();
-    if (wait <= 0) {
-      centre(false);
-    } else if (settleLater === null) {
-      // A glide is under way: let it finish, then correct once for whatever changed meanwhile.
-      settleLater = window.setTimeout(() => {
-        settleLater = null;
-        settle();
-      }, wait);
-    }
+    if (gliding) settleWanted = true;
+    else centre(false);
   }
 
   function show(current: Parts, segments: readonly Segment[], index: number, model: AnswerModel): void {

@@ -2,6 +2,7 @@
 import './styles.css';
 
 import { ApiError, createApi } from './api';
+import { mountLayout } from './layout';
 import { visibleSpan } from './minimap';
 import { cleanQuestion } from './question';
 import { createScrubber } from './scrub';
@@ -53,6 +54,10 @@ const credit = must<HTMLElement>('.credit');
 const legend = must<HTMLElement>('#legend');
 const readLink = must<HTMLAnchorElement>('a.read-link');
 const siteSub = must<HTMLElement>('.site-sub');
+
+mountLayout({
+  scroller: pageScroll, stage: must('.stage'), rail: must('.rail'), sideColumn: must('.side-col'), foot: must('.page-foot'),
+});
 
 const pageView = mountPage(must('#page'), must('h1.firstHeading'));
 const answerView = mountAnswer(pageView, must('#page-scroll'), {

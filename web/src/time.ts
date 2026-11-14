@@ -65,6 +65,15 @@ export function stepTo(starts: readonly number[], t: number, dir: 1 | -1): numbe
   return ordered.findLast((start) => start < t) ?? t;
 }
 
+const YEAR_LABEL_PX = 52;        // the room a year label needs, with air on both sides
+const MOST_YEAR_LABELS = 12;     // more than this is clutter however wide the timeline
+
+/** Every how many years to put a label under a timeline of `years` years drawn `widthPx` wide. */
+export function yearLabelStep(years: number, widthPx: number): number {
+  const fit = Math.max(1, Math.min(MOST_YEAR_LABELS, Math.floor(widthPx / YEAR_LABEL_PX)));
+  return Math.max(1, Math.ceil(years / fit));
+}
+
 export function formatSpan(ms: number): string {
   if (ms < MINUTE) return 'under a minute';
   if (ms < HOUR) return `${Math.floor(ms / MINUTE)} min`;

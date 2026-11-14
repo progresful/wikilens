@@ -35,13 +35,15 @@
 html, body { height: 100%; margin: 0; }
 body { background: var(--surface); color: var(--text); font-family: var(--sans); font-size: 16px; line-height: 1.6; overflow: hidden; }
 button, select, input { font: inherit; color: inherit; }
-button { background: none; border: 0; padding: 0; cursor: pointer; }
+button { background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 [hidden] { display: none !important; }
 
-.app { position: relative; height: 100vh; max-width: 1596px; margin: 0 auto; padding: 0 44px; display: grid;
-  grid-template-rows: auto minmax(0, 1fr); }
+/* 100dvh where there is one: on a phone it is the height actually visible between the browser's bars. */
+.app { position: relative; height: 100vh; height: 100dvh; max-width: 1596px; margin: 0 auto; padding: 0 44px; display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);    /* one column that may be narrower than what is in it */ }
 
 /* ---------- header ---------- */
 .vector-header { display: flex; align-items: center; gap: 28px; height: 50px; margin: 8px 0 4px; }
@@ -271,6 +273,8 @@ a:hover { text-decoration: underline; }
 /* ---------- about the data ---------- */
 .about { position: absolute; left: 44px; bottom: 36px; z-index: 10; width: 360px; max-width: calc(100% - 40px); padding: 14px 18px 16px; font-size: 13px; line-height: 1.6;
   background: var(--surface); border: 1px solid var(--border); border-radius: 2px; box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2); }
+.about-close { float: right; margin: 2px 0 0 12px; font-size: 13px; color: var(--link); }
+.about-close:hover { text-decoration: underline; }
 .about h2 { margin: 0 0 8px; font-family: var(--serif); font-weight: 400; font-size: 22px; border-bottom: 1px solid var(--border); }
 .about ul { list-style: none; margin: 0; padding: 0; }
 .about li { padding: 3px 0; border-bottom: 1px solid var(--border-muted); }
@@ -285,15 +289,59 @@ a:hover { text-decoration: underline; }
   .now { width: 220px; }
   .about { left: 20px; }
 }
+/* One column. The contents list and the overview strip need width and are left out. The query, the
+   key and the credits are moved (src/layout.ts) to follow the article's text, inside the part that
+   scrolls; the question and the timeline stay put above it. */
 @media (max-width: 900px) {
-  /* One column: the contents, the overview and the right column go; the foot stays, under the article. */
-  .page-container { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
-  .side-col { display: contents; }
-  .toc, .rail, .minimap { display: none; }
-  .main-col { grid-row: 1; }
-  .page-foot { grid-row: 2; padding-right: 0; }
+  .app { padding: 0 15px; }
+  .page-container { grid-template-columns: minmax(0, 1fr); }
+  .side-col, .minimap { display: none; }
   .stage { grid-template-columns: minmax(0, 1fr); }
-  .band-top { grid-template-columns: minmax(0, 1fr); }
-  .controls { grid-column: 1; grid-row: 2; }
-  .ask-row { grid-row: 3; }
+  .stage > .rail { display: none; }             /* until it has been moved after the article */
+
+  .vector-header { height: auto; gap: 10px; margin: 8px 0 4px; }
+  .brand { width: auto; }
+  .tagline { display: none; }
+  .wordmark { font-size: 24px; line-height: 34px; }
+  .header-search { min-width: 0; max-width: none; gap: 6px; }
+  /* Sixteen pixels in every field: a phone zooms the whole page when a field with smaller type is tapped. */
+  .article-search, .article-select { flex: 1 1 0; height: 34px; font-size: 16px; }
+  .article-search { padding-left: 32px; background-position: 8px center; }
+
+  .firstHeading { font-size: 1.5em; }
+  .tabs-row { justify-content: flex-end; font-size: 13px; }
+  .tabs:first-child { display: none; }
+  .tab { padding: 5px 0 3px; }
+
+  .history-band { padding: 8px 10px 4px; }
+  .band-top { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
+  .question { font-size: 16px; padding-left: 36px; background-position: 9px center; }
+  .ask-button { padding: 0 16px; }
+  .controls { grid-column: 1; grid-row: 2; min-height: 0; gap: 10px; }
+  .transport button { width: 40px; height: 36px; }
+  .transport .play { width: 50px; }
+  .now { width: auto; flex: 1 1 auto; min-width: 0; }
+  .now-date { font-size: 18px; }
+  /* Examples, other matches and timings on one line that is swiped sideways, so the band keeps its height. */
+  .ask-row { grid-row: 3; flex-wrap: nowrap; overflow-x: auto; min-height: 30px; scrollbar-width: none; }
+  .ask-row::-webkit-scrollbar { display: none; }
+  .ask-row > * { flex: none; }
+  .example-question, .chip, .clear-question { max-width: 72vw; line-height: 24px; }
+  #timeline { margin-top: 6px; }
+  .track { height: 52px; }
+
+  .page { padding-bottom: 20px; }
+  .para.answer { font-size: 17px; }
+  /* The old wording is quoted in three lines at most, so the answer under it is still on screen. */
+  .closest-quote { display: -webkit-box; overflow: hidden; font-size: 15px; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+    line-clamp: 3; }
+  .closest-match { margin-bottom: 8px; padding: 6px 10px 8px; }
+  #page-scroll > .rail { display: block; overflow: visible; padding: 12px 0 0; border-top: 1px solid var(--border-muted); }
+  #page-scroll > .rail .rail-box { margin-bottom: 10px; }
+  #page-scroll > .rail .year-box { display: none; }      /* the date is in the band above */
+  #page-scroll > .rail .sql-box { display: block; min-height: 0; }
+  #page-scroll > .page-foot { padding: 6px 0 28px; border-top: 0; }
+
+  /* A sheet over the bottom of the screen, with its own way out. */
+  .about { position: fixed; left: 12px; right: 12px; bottom: 12px; width: auto; max-width: none; max-height: 72vh; overflow-y: auto; }
 }

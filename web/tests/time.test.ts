@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  churnLevel,
-  clampTime,
-  formatDate,
-  formatSpan,
-  segmentIndexAt,
-  snapTime,
-  stepChange,
-  stepTo,
-  timeToX,
-  xToTime,
+  churnLevel, clampTime, formatDate, formatSpan, segmentIndexAt, snapTime, stepChange, stepTo, timeToX, xToTime, yearLabelStep,
 } from '../src/time';
 import type { Segment, TimeRange } from '../src/types';
 
@@ -120,5 +111,21 @@ describe('formatting', () => {
     expect([1, 2, 4, 8, 16, 400].map(churnLevel)).toEqual([1, 2, 3, 4, 5, 5]);
     expect(churnLevel(0)).toBe(1);
     expect(churnLevel(3)).toBe(2);
+  });
+});
+
+describe('yearLabelStep', () => {
+  it('labels every year when there is room for each', () => {
+    expect(yearLabelStep(10, 1200)).toBe(1);
+  });
+
+  it('labels fewer years on a narrow timeline, so the labels never touch', () => {
+    expect(yearLabelStep(23, 1240)).toBe(2);       // a desktop timeline: every second year
+    expect(yearLabelStep(23, 366)).toBe(4);        // a phone: every fourth
+  });
+
+  it('never gives a step of nothing, whatever the width', () => {
+    expect(yearLabelStep(23, 0)).toBe(23);
+    expect(yearLabelStep(1, 300)).toBe(1);
   });
 });

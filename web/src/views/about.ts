@@ -25,9 +25,19 @@ function facts(coverage: Coverage): string[] {
 export function mountAbout(panel: HTMLElement, toggle: HTMLButtonElement, handlers: AboutHandlers): void {
   const heading = document.createElement('h2');
   heading.textContent = 'About the data';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'about-close';
+  close.textContent = 'Close';
   const list = document.createElement('ul');
   const notes = document.createElement('div');
-  panel.replaceChildren(heading, list, notes);
+  panel.replaceChildren(close, heading, list, notes);
+
+  function shut(): void {
+    panel.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  close.addEventListener('click', shut);
 
   function note(text: string): HTMLParagraphElement {
     const paragraph = document.createElement('p');
@@ -58,11 +68,7 @@ export function mountAbout(panel: HTMLElement, toggle: HTMLButtonElement, handle
   }
 
   toggle.addEventListener('click', () => {
-    if (panel.hidden) {
-      void open();
-    } else {
-      panel.hidden = true;
-      toggle.setAttribute('aria-expanded', 'false');
-    }
+    if (panel.hidden) void open();
+    else shut();
   });
 }
