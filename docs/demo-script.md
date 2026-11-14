@@ -14,6 +14,7 @@ The app opens on *Suomettuminen* (Finlandization), laid out as the Wikipedia art
 title, tabs, contents list. The opened tab is "History through time". The paragraphs are
 tinted by how often each has been reworded, and the dots in the contents list say the same
 per section: the article shows you where it has been argued over before you type anything.
+The strip beside the text is the whole article, one bar per paragraph.
 
 ## 0:20 Ask once (25 s)
 
@@ -61,7 +62,7 @@ Point at the query box in the right-hand column while dragging.
 > Wikipedia. The timeline is that paragraph's history rows. The question ranks vectors
 > joined to `FOR SYSTEM_TIME ALL`, which is why it finds text that was deleted years ago.
 
-Open **About the data** for the counts, read live from the database.
+Open **About the data** (at the foot of the left column) for the counts, read live from the database.
 
 ## 2:50 Close (10 s)
 

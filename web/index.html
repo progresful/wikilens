@@ -13,19 +13,24 @@
         <span class="tagline">Finnish Wikipedia through time</span>
       </div>
       <div id="picker" class="header-search"></div>
-      <div class="header-end">
-        <span class="not-wikipedia">An independent demo on MariaDB · not Wikipedia</span>
-        <button class="about-toggle" type="button" aria-expanded="false">About the data</button>
-      </div>
     </header>
 
     <div class="page-container">
-      <nav class="toc" id="toc" aria-label="Contents"></nav>
+      <div class="side-col">
+        <nav class="toc" id="toc" aria-label="Contents"></nav>
+        <footer class="page-foot">
+          <div class="credit"></div>
+          <div class="review-status"></div>
+          <div>
+            <button class="about-toggle" type="button" aria-expanded="false">About the data</button>
+            · <span class="not-wikipedia">not Wikipedia</span>
+          </div>
+        </footer>
+      </div>
 
       <main class="main-col">
         <div class="title-row">
           <h1 class="firstHeading" lang="fi"></h1>
-          <span class="review-status"></span>
         </div>
 
         <div class="tabs-row">
@@ -63,6 +68,8 @@
             <article class="page" id="page" lang="fi"></article>
           </div>
 
+          <aside class="minimap" id="minimap" aria-hidden="true"></aside>
+
           <aside class="rail">
             <section class="rail-box year-box">
               <h2 class="rail-title">The article as it stood in</h2>
@@ -76,7 +83,6 @@
               <h2 class="rail-title">Timeline key</h2>
               <div class="legend" id="legend"></div>
             </section>
-            <div class="credit"></div>
           </aside>
         </div>
       </main>

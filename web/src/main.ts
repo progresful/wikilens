@@ -2,6 +2,7 @@
 import './styles.css';
 
 import { ApiError, createApi } from './api';
+import { visibleSpan } from './minimap';
 import { cleanQuestion } from './question';
 import { createScrubber } from './scrub';
 import { initialState, reduce } from './state';
@@ -11,6 +12,7 @@ import type { Frame, Overview } from './types';
 import { mountAbout } from './views/about';
 import { mountAnswer } from './views/answer';
 import { mountAsk } from './views/ask';
+import { mountMinimap } from './views/minimap';
 import { mountPage } from './views/page';
 import { mountPicker } from './views/picker';
 import { mountSqlPanel } from './views/sqlPanel';
@@ -65,6 +67,7 @@ const askView = mountAsk(must('#ask'), {
   onClear: () => dispatch({ type: 'question-cleared' }),
 });
 const tocView = mountToc(must('#toc'), { onSection: scrollToSection });
+const minimapView = mountMinimap(must('#minimap'), { onJump: scrollToBlock });
 const sqlView = mountSqlPanel(must('#sql'));
 const pickerView = mountPicker(must('#picker'), { onArticle: (pageId) => void openArticle(pageId) });
 const timelineView = mountTimeline(must('#timeline'), {
@@ -105,6 +108,26 @@ function scrollToSection(headingParaId: number | null): void {
   const heading = pageView.blockElement(headingParaId);
   if (heading === undefined) return;        // the section left the page between drawing the list and the click
   pageScroll.scrollTo({ top: Math.max(0, heading.offsetTop - SECTION_TOP_MARGIN_PX), behavior: 'smooth' });
+}
+
+/** Bring a block to the middle of the article view: the overview strip was pressed there. */
+function scrollToBlock(index: number, within: number): void {
+  const box = pageView.blockBoxes()[index];
+  if (box === undefined) return;
+  const top = box.top + box.height * within - pageScroll.clientHeight / 2;
+  pageScroll.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+}
+
+let overviewQueued = false;
+
+/** Redraw the overview's view box before the next paint; any number of calls make one measurement. */
+function queueOverview(): void {
+  if (overviewQueued) return;
+  overviewQueued = true;
+  requestAnimationFrame(() => {
+    overviewQueued = false;
+    minimapView.setView(visibleSpan(pageView.blockBoxes(), pageScroll.scrollTop, pageScroll.clientHeight));
+  });
 }
 
 function syncPlaying(): void {
@@ -257,7 +280,7 @@ const LEGEND_LANDING: readonly (readonly [string, string])[] = [
 ];
 const LEGEND_ASKED: readonly (readonly [string, string])[] = [
   ['swatch-edits', 'every edit, by month'],
-  ['swatch-wording', 'one wording of the answer, darker = later'],
+  ['swatch-wording', 'the answer\'s wordings, darker = later'],
   ['swatch-reverted', 'replaced, then reverted'],
   ['swatch-gap', 'answer missing from the article'],
   ['swatch-added', 'words added'],
@@ -332,11 +355,13 @@ function render(): void {
       wordingsVersion: state.wordingsVersion, churn, answerParaId,
     });
     tocView.update({ frame: state.frame, cache, wordingsVersion: state.wordingsVersion, churn, answerParaId });
+    minimapView.update({ frame: state.frame, cache, wordingsVersion: state.wordingsVersion, churn, answerParaId });
     const weak = state.ask?.matches.find((match) => match.paraId === answerParaId)?.weak ?? false;
     answerView.update({ tracked: state.tracked, time: state.time, corpusEnd: overview.corpusEnd, weak });
   }
   renderCredit();
   renderLegend();
+  queueOverview();
 }
 
 function isTyping(target: EventTarget | null): boolean {
@@ -356,6 +381,9 @@ window.addEventListener('keydown', (event) => {
     step(1);
   }
 });
+pageScroll.addEventListener('scroll', queueOverview, { passive: true });
+window.addEventListener('resize', queueOverview);
+new ResizeObserver(queueOverview).observe(pageView.blocks);     // a wording that grows or shrinks moves what is in view
 playButton.addEventListener('click', togglePlay);
 must<HTMLButtonElement>('.prev').addEventListener('click', () => step(-1));
 must<HTMLButtonElement>('.next').addEventListener('click', () => step(1));

@@ -233,3 +233,12 @@ test('the contents list marks the section that holds the answer', async ({ page 
   await page.locator('.clear-question').click();
   await expect(page.locator('.toc-item.has-answer')).toHaveCount(0);
 });
+
+test('the overview marks where the answer sits, and gives up the tint', async ({ page }) => {
+  await ask(page);
+  await expect(page.locator('.mm-bar.mm-answer')).toHaveCount(1);
+  await expect(page.locator('.mm-bar[class*="churn-"]')).toHaveCount(0);
+  await clickTrackAt(page, Date.UTC(2013, 5, 15));           // the answer was out of the article then
+  await expect(page.locator('.mm-bar')).toHaveCount(2);
+  await expect(page.locator('.mm-bar.mm-answer')).toHaveCount(0);
+});

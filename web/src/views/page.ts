@@ -1,6 +1,7 @@
 // The article page: the blocks of one frame, in reading order. Elements are kept per
 // paragraph and reused from frame to frame, so a scrub only touches what changed.
 // Article text is always written with textContent: it is never interpreted as markup.
+import type { Box } from '../minimap';
 import { churnLevel, formatDate } from '../time';
 import type { Frame, Wording } from '../types';
 import type { WordingCache } from '../wordingCache';
@@ -28,6 +29,8 @@ export interface PageView {
   answerElement(paraId: number): HTMLElement;
   /** The element of a block that is on the page now, for scrolling to it. */
   blockElement(paraId: number): HTMLElement | undefined;
+  /** Where each block of the frame sits in the scrolling article, in reading order. Reads layout. */
+  blockBoxes(): Box[];
   readonly blocks: HTMLElement;
 }
 
@@ -150,5 +153,15 @@ export function mountPage(root: HTMLElement, heading: HTMLElement): PageView {
     return element === undefined || element.dataset.absent === '1' ? undefined : element;
   }
 
-  return { update, answerElement, blockElement, blocks };
+  function blockBoxes(): Box[] {
+    let bottom = 0;      // a block that is not drawn takes no room, just under the block before it
+    return (last?.frame?.blocks ?? []).map((block) => {
+      const element = elements.get(block.paraId);
+      if (element === undefined || element.hidden) return { top: bottom, height: 0 };
+      bottom = element.offsetTop + element.offsetHeight;
+      return { top: element.offsetTop, height: element.offsetHeight };
+    });
+  }
+
+  return { update, answerElement, blockElement, blockBoxes, blocks };
 }

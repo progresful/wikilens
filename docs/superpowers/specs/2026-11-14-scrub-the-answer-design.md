@@ -391,6 +391,23 @@ frame and paper page of the prototype) and the minimap.
 - Interface text is English over Finnish article text, as before. No control is decorative:
   the "Read on Wikipedia" tab opens the real article.
 
+## 18. Amendment, 14 November 2026: the overview returns, the header goes quiet
+
+**Decided** by the owner after seeing the Wikipedia look:
+
+- The strip at the top right (the "not Wikipedia" line, "About the data", and the note on
+  whether an article's story was read by hand) is removed from the header and the title row.
+  **Call:** the three are kept, small, at the foot of the left column rather than deleted:
+  "About the data" is a working panel the demo uses, and the other two are the page's
+  honesty about what it is. Deleting them outright is the owner's to ask for.
+- The overview of the whole article (one bar per block, tinted like the page, the answer
+  marked) comes back. The owner offered two places: on the right, or on the left merged into
+  the contents list. **Call:** on the right, between the article and the right-hand column,
+  where a document map is expected. It also shows which part of the article is in view, and
+  pressing or dragging on it moves the article. A short article leaves the strip partly
+  empty, so the article is seen to grow as the playhead moves forward. The contents list
+  stays as it is, with its per-section dots.
+
 ## 16. Not yet established
 
 - The submission deadline, required format, team size, and whether judges drive the demo. The owner was asked and approved the design without giving them, so the plan uses the stated fallback: due Sunday 15 November in the morning, a repository plus a short video plus the owner presenting live, one person building. These are planning assumptions, not confirmed facts; the owner should check the organisers' instructions.

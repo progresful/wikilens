@@ -289,3 +289,61 @@ test('while a frame\'s texts cannot be loaded, the contents list is marked as no
   await expect(page.locator('.toc-list')).not.toHaveClass(/pending/);
   await expect(page.locator('.toc-item')).toHaveText([/Tausta/]);
 });
+
+// ---- a quiet header, and the overview beside the article ----
+
+test('the header holds only the name and the article search', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('h1.firstHeading')).toHaveText('Testisota');
+  await expect(page.locator('header.vector-header .not-wikipedia, header.vector-header .about-toggle')).toHaveCount(0);
+  await expect(page.locator('.title-row .review-status')).toHaveCount(0);
+  await expect(page.locator('.page-foot .about-toggle')).toBeVisible();        // still reachable, at the foot of the page
+  await expect(page.locator('.page-foot .not-wikipedia')).toContainText('not Wikipedia');
+  await expect(page.locator('.page-foot .review-status')).toHaveText('automatic matching, not reviewed');
+});
+
+test('the overview draws every block of the article as a bar, tinted like the page', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.mm-bar')).toHaveCount(4);                 // the heading and three paragraphs
+  await expect(page.locator('.mm-bar.mm-heading')).toHaveCount(1);
+  await expect(page.locator('.mm-bar.churn-3')).toHaveCount(1);         // the paragraph with four wordings
+  await expect(page.locator('.mm-count')).toHaveText('3 ¶');
+  await clickTrackAt(page, Date.UTC(2013, 5, 15));                      // one paragraph was out of the article then
+  await expect(page.locator('.mm-bar')).toHaveCount(2);
+  await expect(page.locator('.mm-count')).toHaveText('1 ¶');
+  await clickTrackPx(page, 2);                                          // before the article existed
+  await expect(page.locator('.mm-bar')).toHaveCount(0);
+  await expect(page.locator('.mm-view')).toBeHidden();
+});
+
+test('the overview sits to the right of the article and shows which part is in view', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 470 });      // a short window, so the small fixture article scrolls
+  await page.goto('/');
+  await expect(page.locator('.mm-bar')).toHaveCount(4);
+  const article = await page.locator('#page-scroll').boundingBox();
+  const map = await page.locator('#minimap').boundingBox();
+  if (article === null || map === null) throw new Error('layout elements missing');
+  expect(map.x).toBeGreaterThanOrEqual(article.x + article.width - 1);
+  const view = page.locator('.mm-view');
+  await expect(view).toBeVisible();
+  const before = await view.boundingBox();
+  if (before === null) throw new Error('the view box is not drawn');
+  await page.locator('#page-scroll').evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  await expect.poll(async () => (await view.boundingBox())?.y ?? 0).toBeGreaterThan(before.y);
+});
+
+test('pressing on the overview brings that part of the article into view', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 470 });
+  await page.goto('/');
+  await expect(page.locator('.mm-bar')).toHaveCount(4);
+  const scroller = page.locator('#page-scroll');
+  expect(await scroller.evaluate((element) => element.scrollTop)).toBe(0);
+  const last = await page.locator('.mm-bar').last().boundingBox();
+  if (last === null) throw new Error('the overview has no bars');
+  await page.mouse.click(last.x + 2, last.y + last.height / 2);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(20);
+  const first = await page.locator('.mm-bar').first().boundingBox();
+  if (first === null) throw new Error('the overview has no bars');
+  await page.mouse.click(first.x + 2, first.y + 1);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(0);
+});
