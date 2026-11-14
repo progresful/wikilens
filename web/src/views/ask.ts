@@ -85,7 +85,7 @@ export function mountAsk(root: HTMLElement, handlers: AskHandlers): AskView {
       nodes.push(button('chip', short, match.preview, () => handlers.onChip(match.paraId)));
     }
     if (ask.mode === 'vector') {
-      nodes.push(span('ask-timing', `every wording this article ever had, ranked: embedding ${ask.embedMs.toFixed(0)} ms · MariaDB ${ask.rankMs.toFixed(1)} ms`));
+      nodes.push(span('ask-timing', `this article's whole history ranked (every wording of 40+ characters): embedding ${ask.embedMs.toFixed(0)} ms · MariaDB ${ask.rankMs.toFixed(1)} ms`));
     }
     nodes.push(button('clear-question', '× clear', 'clear the question', handlers.onClear));
     return nodes;

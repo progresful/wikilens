@@ -15,11 +15,12 @@ Built for the MariaDB "Wikipedia Through Time" challenge at Junction 2026.
 
 - **No dates to pick.** One question, then a timeline you scrub. The answer changes the
   instant the playhead moves; the article around it follows from a live query.
-- **Finds what was deleted.** The question is ranked against every wording the article ever
-  had, so an answer that was removed years ago is still found.
+- **Finds what was deleted.** The question is ranked against the wordings the article had at
+  any time (every paragraph or list item of 40 or more characters; headings and shorter lines
+  are not embedded), so an answer that was removed years ago is still found.
 - **Shows what happened and no more.** Labels are "first appears", "text changed", "removed",
-  "restored unchanged", "replaced, reverted after 7 min". None says why. Each wording links to
-  its revision on Wikipedia.
+  "restored unchanged", "replaced, reverted after 7 min". None says why. Each wording of the
+  answer links to its revision on Wikipedia.
 - **Works before you type.** With no question, paragraphs are tinted by how often they have
   been reworded.
 
@@ -84,6 +85,7 @@ cp .env.example .env                    # then set the two passwords in .env
 docker compose up -d --wait             # MariaDB, pinned by digest
 
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+# (the exact versions this was built and tested with are in requirements.lock.txt)
 ollama serve &                          # skip if Ollama already runs
 ollama pull bge-m3                      # 1.2 GB
 
@@ -144,7 +146,7 @@ live frame query for each move.
 - **Paragraph identity is a judgment.** Which blocks of two versions count as "the same
   paragraph" is decided by rules (identical, moved, similar enough, restored). A weak link is
   drawn dashed and labelled "heavily rewritten". The stories the app opens with were read by
-  hand; the rest are marked as not reviewed.
+  hand; every other article says "automatic matching, not reviewed" next to its name.
 - **History is shown as it was.** Vandalism appears as it was written, for as long as it
   lasted.
 - **Local only.** The API listens on 127.0.0.1 and has no rate limiting or accounts. It is a
@@ -157,7 +159,7 @@ live frame query for each move.
 ## Credits and licences
 
 - Article text: Finnish Wikipedia and its authors, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-  Every wording on screen links to its revision.
+  The page links to the article and its authors, and each wording of the answer to its revision.
 - Data: [MariaDB/mariadb-wikipedia-datasets](https://github.com/MariaDB/mariadb-wikipedia-datasets), dataset M.
 - The wikitext cleaner is ported from
   [MariaDB/mariadb-system-versioning-wikipedia](https://github.com/MariaDB/mariadb-system-versioning-wikipedia)

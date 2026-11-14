@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createScrubber, DWELL_MS, DWELL_REVERTED_MS, PLAY_DURATION_MS } from '../src/scrub';
+import { createScrubber, DWELL_BUDGET_MS, DWELL_MS, DWELL_REVERTED_MS, PLAY_DURATION_MS } from '../src/scrub';
 import type { Frame, Segment, TimeRange } from '../src/types';
 
 interface Deferred<T> {
@@ -280,6 +280,58 @@ describe('playing', () => {
     const h = harness();
     h.scrubber.play([]);
     expect(h.scrubber.playing).toBe(false);
+  });
+});
+
+describe('playing over a real range', () => {
+  // Found in review: play computed fractional times, the API takes whole milliseconds and
+  // rejected every frame between changes.
+  const real: TimeRange = { first: Date.UTC(2004, 0, 1), end: Date.UTC(2026, 9, 1, 23, 59, 59) };
+
+  it('moves only to whole milliseconds, at a 60 Hz clock', async () => {
+    const h = harness();
+    h.scrubber.open(1, real);
+    h.scrubber.seek(real.first);
+    h.scrubber.play([]);
+    for (let clock = 0; clock <= 2000; clock += 1000 / 60) {
+      h.tick(clock);
+      h.requests.at(-1)?.answer.resolve(frameAt(h.requests.at(-1)?.t ?? 0));
+      await settle();
+    }
+    expect(h.times.length).toBeGreaterThan(50);
+    expect(h.times.every(Number.isInteger)).toBe(true);
+    expect(h.requests.every((request) => Number.isInteger(request.t))).toBe(true);
+  });
+
+  it('rounds a fractional seek too', () => {
+    const h = harness();
+    h.scrubber.open(1, real);
+    h.scrubber.seek(real.first + 1234.56);
+    expect(h.scrubber.time).toBe(real.first + 1235);
+    expect(h.requests[0]?.t).toBe(real.first + 1235);
+  });
+});
+
+describe('playing a paragraph with many changes', () => {
+  it('shortens the holds so the whole play stays watchable', () => {
+    // 60 changes at 1,100 ms each would hold for over a minute; the holds share DWELL_BUDGET_MS instead.
+    const many = Array.from({ length: 60 }, (_, i) => seg(200 * (i + 1), 200 * (i + 2)));
+    const hold = DWELL_BUDGET_MS / 60;
+    const h = harness();
+    h.scrubber.open(1, range);
+    h.scrubber.seek(0);
+    h.scrubber.play(many);
+    h.tick(0);
+    h.tick(300);                              // passes the first change at 200: lands on it and holds
+    expect(h.scrubber.time).toBe(200);
+    h.tick(300 + hold - 1);
+    expect(h.scrubber.time).toBe(200);
+    h.tick(300 + hold + 50);
+    expect(h.scrubber.time).toBeGreaterThan(200);
+  });
+
+  it('keeps the full hold when there are few changes', () => {
+    expect(3 * DWELL_MS).toBeLessThan(DWELL_BUDGET_MS);     // the three-change test above still holds 1,100 ms
   });
 });
 

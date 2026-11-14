@@ -14,6 +14,11 @@ import {
 import type { Article, AskResult, Coverage, Frame, Overview, Segment, Wording } from './types';
 
 export const MAX_HASHES_PER_REQUEST = 200;
+export const DEFAULT_TIMEOUT_MS = 20_000;   // generous: the first question after a cold start loads the model
+
+export interface ApiOptions {
+  timeoutMs?: number;
+}
 
 const envelopeSchema = z.object({
   success: z.boolean(),
@@ -49,12 +54,18 @@ function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
-export function createApi(fetchImpl: FetchLike = (url, init) => fetch(url, init)): Api {
+export function createApi(fetchImpl: FetchLike = (url, init) => fetch(url, init), options: ApiOptions = {}): Api {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
   async function request<T>(url: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T> {
+    // The caller's signal (a newer frame makes this one pointless) and a time limit of our own.
+    const timeLimit = AbortSignal.timeout(timeoutMs);
+    const signal = init?.signal ? AbortSignal.any([init.signal, timeLimit]) : timeLimit;
     let response: Response;
     try {
-      response = await fetchImpl(url, init);
+      response = await fetchImpl(url, { ...init, signal });
     } catch (error: unknown) {
+      if (timeLimit.aborted) throw new ApiError('the server did not answer in time', 0);
       if (isAbort(error)) throw error;
       throw new ApiError('cannot reach the server', 0);
     }

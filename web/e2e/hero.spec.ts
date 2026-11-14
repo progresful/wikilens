@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-import { clickTrackAt, errorEnvelope, QUESTION } from './helpers';
+import { clickTrackAt, clickTrackPx, errorEnvelope, QUESTION } from './helpers';
 
 // The tracked paragraph of the fixture article lives like this:
 //   2010-03-01 first appears · 2011 text changed · 2012-01-01 10:00 replaced, 10:07 reverted ·
@@ -178,4 +178,50 @@ test('an article without vectors asks by keyword and says so', async ({ page }) 
   await ask(page, 'marraskuuta');
   await expect(page.locator('.mode-keyword')).toHaveText('keyword match');
   await expect(page.locator('.ask-timing')).toHaveCount(0);        // no vector ranking was done, so none is claimed
+});
+
+// ---- found in review ----
+
+test('opening another article after scrubbing to before the answer shows that article whole', async ({ page }) => {
+  await ask(page);
+  await clickTrackPx(page, 2);                                   // January 2010: before the answer was written
+  await expect(page.locator('.first-appearance')).toBeVisible();
+  await page.locator('select.article-select').selectOption('2');
+  await expect(page.locator('h1')).toHaveText('Toinen artikkeli');
+  await expect(page.locator('.para:visible')).toHaveCount(3);    // its heading and both paragraphs, none hidden
+  await expect(page.locator('.para')).toHaveCount(3);            // and nothing left over from the first article
+  await expect(page.locator('.first-appearance')).toBeHidden();
+  await expect(page.locator('.answer')).toHaveCount(0);
+});
+
+test('an answer that arrives after another article was opened is dropped', async ({ page }) => {
+  await page.route('**/api/articles/1/ask', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
+  });
+  await type(page, QUESTION);
+  await page.locator('select.article-select').selectOption('2');
+  await expect(page.locator('h1')).toHaveText('Toinen artikkeli');
+  await page.waitForResponse('**/api/articles/1/ask');
+  await page.waitForTimeout(300);
+  await expect(page.locator('.answer')).toHaveCount(0);
+  await expect(page.locator('.seg')).toHaveCount(0);
+  await expect(page.locator('.ask-wait')).toHaveCount(0);          // no longer waiting for an answer
+  await expect(page.locator('.chip')).toHaveCount(0);
+  await expect(page.locator('.para:visible')).toHaveCount(3);
+});
+
+test('during play with a question, frames are answered and the answer keeps changing', async ({ page }) => {
+  await ask(page);
+  for (let i = 0; i < 7; i++) await back(page);
+  await expect(page.locator('.answer-label')).toHaveText('first appears');
+  const failures: number[] = [];
+  page.on('response', (response) => {
+    if (response.url().includes('/at?t=') && !response.ok()) failures.push(response.status());
+  });
+  await page.keyboard.press(' ');
+  await expect(page.locator('.answer-label')).toHaveText('removed', { timeout: 20_000 });
+  await expect(page.locator('.error-line')).toBeHidden();
+  await page.keyboard.press(' ');
+  expect(failures).toEqual([]);
 });

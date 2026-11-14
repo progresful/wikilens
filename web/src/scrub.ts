@@ -12,6 +12,7 @@ import type { Frame, Segment, TimeRange } from './types';
 export const PLAY_DURATION_MS = 13_000;      // an article's whole history plays in this long, plus holds
 export const DWELL_MS = 1_100;               // hold on each change of the answer
 export const DWELL_REVERTED_MS = 1_700;      // hold longer on a wording that was reverted
+export const DWELL_BUDGET_MS = 15_000;       // all holds of one play together; with many changes each hold shrinks
 
 export interface ScrubDeps {
   fetchFrame: (pageId: number, t: number, signal: AbortSignal) => Promise<Frame>;
@@ -58,6 +59,7 @@ export function createScrubber(deps: ScrubDeps): Scrubber {
   let lastClock: number | null = null;
   let dwellUntil = 0;
   let changes: Change[] = [];
+  let dwellScale = 1;
 
   function request(t: number): void {
     if (page === null) return;
@@ -95,7 +97,8 @@ export function createScrubber(deps: ScrubDeps): Scrubber {
 
   function moveTo(t: number): void {
     if (page === null) return;
-    time = Math.min(page.range.end, Math.max(page.range.first, t));
+    // Whole milliseconds: the API takes an integer, and a fraction of a millisecond means nothing here.
+    time = Math.round(Math.min(page.range.end, Math.max(page.range.first, t)));
     deps.onTime(time);
     request(time);
   }
@@ -127,7 +130,7 @@ export function createScrubber(deps: ScrubDeps): Scrubber {
       const upcoming = changes.find((change) => change.start > time);
       if (upcoming !== undefined && next >= upcoming.start) {
         next = upcoming.start;
-        dwellUntil = now + (upcoming.reverted ? DWELL_REVERTED_MS : DWELL_MS);
+        dwellUntil = now + (upcoming.reverted ? DWELL_REVERTED_MS : DWELL_MS) * dwellScale;
       }
       if (next >= page.range.end) {
         stopClock();                 // before the last move, so a listener sees `playing` already false
@@ -157,6 +160,8 @@ export function createScrubber(deps: ScrubDeps): Scrubber {
       changes = segments
         .map((segment) => ({ start: segment.start, reverted: segment.reverted }))
         .sort((a, b) => a.start - b.start);
+      const fullHolds = changes.reduce((sum, change) => sum + (change.reverted ? DWELL_REVERTED_MS : DWELL_MS), 0);
+      dwellScale = Math.min(1, DWELL_BUDGET_MS / Math.max(1, fullHolds));
       playing = true;
       lastClock = null;
       dwellUntil = 0;

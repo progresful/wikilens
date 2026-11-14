@@ -44,6 +44,8 @@ let state: AppState = initialState;
 
 const nowDate = must<HTMLElement>('.now-date');
 const nowRel = must<HTMLElement>('.now-rel');
+const pageScroll = must<HTMLElement>('#page-scroll');
+const reviewStatus = must<HTMLElement>('.review-status');
 const bigYear = must<HTMLElement>('.big-year');
 const errorLine = must<HTMLElement>('.error-line');
 const playButton = must<HTMLButtonElement>('.play');
@@ -140,9 +142,13 @@ function rangeFor(overview: Overview): { first: number; end: number } {
   return { first: Date.UTC(new Date(overview.firstTs).getUTCFullYear(), 0, 1), end: overview.corpusEnd };
 }
 
+let lastOpening = 0;
+
 async function openArticle(pageId: number): Promise<void> {
+  const opening = ++lastOpening;
   try {
     const overview = await api.overview(pageId);
+    if (opening !== lastOpening) return;       // a later choice of article has overtaken this one
     const range = rangeFor(overview);
     scrubber.open(pageId, range);
     dispatch({ type: 'article-opened', pageId, overview, range });
@@ -154,30 +160,41 @@ async function openArticle(pageId: number): Promise<void> {
   }
 }
 
+let lastAsking = 0;
+
 async function ask(raw: string): Promise<void> {
   const question = cleanQuestion(raw);
   if (question === null) {
     dispatch({ type: 'ask-failed', message: 'Type a question about this article first (up to 300 characters).' });
     return;
   }
-  if (state.pageId === null) return;
+  const pageId = state.pageId;
+  if (pageId === null) return;
+  const asking = ++lastAsking;
   dispatch({ type: 'asking' });
   try {
-    const result = await api.ask(state.pageId, question);
+    const result = await api.ask(pageId, question);
+    // The answer belongs to the article and the question it was asked of. If either has changed
+    // meanwhile (a cold model can take seconds), it is dropped.
+    if (state.pageId !== pageId || asking !== lastAsking) return;
     dispatch({ type: 'asked', question, result });
     timelineView.track.focus();      // arrows and space now drive the playhead
   } catch (error: unknown) {
+    if (state.pageId !== pageId || asking !== lastAsking) return;
     dispatch({ type: 'ask-failed', message: message(error) });
   }
 }
 
 async function track(paraId: number): Promise<void> {
-  if (state.pageId === null) return;
+  const pageId = state.pageId;
+  if (pageId === null) return;
   try {
-    const segments = await api.paragraphTimeline(state.pageId, paraId);
+    const segments = await api.paragraphTimeline(pageId, paraId);
+    if (state.pageId !== pageId) return;
     dispatch({ type: 'tracked', paraId, segments });
     timelineView.track.focus();
   } catch (error: unknown) {
+    if (state.pageId !== pageId) return;
     dispatch({ type: 'error', message: message(error) });
   }
 }
@@ -192,6 +209,19 @@ function step(dir: 1 | -1): void {
   if (state.range === null) return;
   scrubber.seek(stepTo(stepTimes(), state.time, dir));
   syncPlaying();
+}
+
+/** Whether this article's story was read by a person. Always on screen, not only inside the list. */
+function renderReviewStatus(): void {
+  const article = state.articles.find((candidate) => candidate.pageId === state.pageId);
+  if (article === undefined) {
+    reviewStatus.textContent = '';
+    return;
+  }
+  reviewStatus.classList.toggle('reviewed', article.reviewed);
+  reviewStatus.textContent = article.reviewed ? 'story read by hand'
+    : article.tier === 1 ? 'automatic matching, not reviewed'
+      : 'history only · automatic matching, not reviewed';
 }
 
 function renderCredit(): void {
@@ -252,8 +282,13 @@ function render(): void {
   nowDate.textContent = state.range === null ? '' : formatDate(state.time);
   bigYear.textContent = state.range === null ? '' : String(new Date(state.time).getUTCFullYear());
   nowRel.textContent = nowLine();
+  // While frames fail, the page still shows an earlier moment than the playhead: say so and dim it.
+  const stale = state.error !== null && state.frame !== null && state.frame.t !== state.time;
+  pageScroll.classList.toggle('stale', stale);
   errorLine.hidden = state.error === null;
-  errorLine.textContent = state.error ?? '';
+  errorLine.textContent = state.error === null ? ''
+    : stale && state.frame !== null ? `${state.error} · the page shows ${formatDate(state.frame.t)}` : state.error;
+  renderReviewStatus();
   playButton.textContent = state.playing ? '❚❚' : '▶';
   playButton.setAttribute('aria-pressed', String(state.playing));
   playButton.setAttribute('aria-label', state.playing ? 'pause' : 'play');
@@ -275,7 +310,7 @@ function render(): void {
     const churn = state.tracked === null ? overview.churn : null;
     const answerParaId = state.tracked?.paraId ?? null;
     pageView.update({
-      title: overview.title, firstTs: overview.firstTs, frame: state.frame, cache,
+      pageId: overview.pageId, title: overview.title, firstTs: overview.firstTs, frame: state.frame, cache,
       wordingsVersion: state.wordingsVersion, churn, answerParaId,
     });
     minimapView.update({ frame: state.frame, cache, wordingsVersion: state.wordingsVersion, churn, answerParaId });

@@ -43,6 +43,8 @@ button { background: none; border: 0; cursor: pointer; }
 .article-select { font-family: var(--mono); font-size: 12px; background: var(--ink-2); color: var(--paper);
   border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px; max-width: 320px; }
 #picker { display: flex; align-items: center; gap: 8px; }
+.review-status { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--dim); white-space: nowrap; }
+.review-status.reviewed { color: var(--amber); }
 .article-search { font-family: var(--mono); font-size: 12px; width: 250px; background: var(--ink-2); color: var(--paper);
   border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px; outline: none; }
 .article-search::placeholder { color: var(--dim); }
@@ -74,7 +76,11 @@ button { background: none; border: 0; cursor: pointer; }
   line-height: 1; color: rgba(239, 231, 214, 0.055); pointer-events: none; user-select: none; font-variant-numeric: tabular-nums; }
 .page-scroll { position: relative; flex: 0 1 900px; min-width: 0; overflow-y: auto; border-radius: 3px;
   background: linear-gradient(180deg, #f4eddd, #e9dfca); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); scrollbar-width: thin; }
-.page { color: var(--text); padding: 22px 44px 60px; }
+.page { color: var(--text); padding: 22px 44px 60px; transition: opacity 0.2s; }
+/* Frames are failing: what is shown is an earlier moment than the playhead says. */
+.page-scroll.stale .page { opacity: 0.4; }
+.page-scroll.stale::after { content: 'not current'; position: sticky; float: right; bottom: 12px; right: 14px; font-family: var(--mono);
+  font-size: 11px; color: #fff; background: var(--red); padding: 3px 8px; border-radius: 3px; }
 .page h1 { font-family: var(--display); font-weight: 400; font-size: 36px; margin: 0 0 12px; padding-bottom: 6px;
   border-bottom: 1px solid var(--paper-2); }
 .page-empty { font-family: var(--mono); font-size: 13px; color: #6f6654; margin: 28px 0; }

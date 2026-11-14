@@ -16,7 +16,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        'cd .. && .venv/bin/python -m wikilens.fixture --db wikilens_e2e && ' +
+        'cd .. && .venv/bin/python -m wikilens.fixture --db wikilens_e2e --two-articles && ' +
         'WIKILENS_DB_NAME=wikilens_e2e WIKILENS_EMBEDDER=stub WIKILENS_API_PORT=8001 .venv/bin/python -m wikilens.api',
       url: `${API}/api/health`,
       reuseExistingServer: false,

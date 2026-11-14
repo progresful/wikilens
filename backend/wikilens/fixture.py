@@ -77,23 +77,51 @@ def fixture_revisions() -> list[RawRevision]:
     return revisions
 
 
-def load_fixture(con: Connection) -> None:
-    """Drop every table, load the fixture article, and give its paragraphs stub vectors."""
+SECOND_PAGE_ID = 2
+SECOND_TITLE = "Toinen artikkeli"
+
+
+def second_article_revisions() -> list[RawRevision]:
+    """A small second article, for tests that move from one article to another. Its paragraph
+    numbers overlap the first article's on purpose."""
+    script = (
+        (201, datetime(2012, 6, 1), ("== Alku ==", "Toisen artikkelin ensimmäinen kappale.", "Toisen artikkelin toinen kappale.")),
+        (202, datetime(2014, 6, 1), ("== Alku ==", "Toisen artikkelin ensimmäinen kappale, muokattuna.", "Toisen artikkelin toinen kappale.")),
+    )
+    revisions: list[RawRevision] = []
+    for rev_id, timestamp, lines in script:
+        text = "\n".join(lines)
+        revisions.append(RawRevision(
+            page_id=SECOND_PAGE_ID, title=SECOND_TITLE, rev_id=rev_id, parent_id=rev_id - 1 if rev_id > 201 else None,
+            timestamp=timestamp, user="Testaaja", anonymous=False, comment=None, minor=False,
+            sha1=hashlib.sha1(text.encode(), usedforsecurity=False).hexdigest()[:31], bytes=len(text.encode()), text=text,
+        ))
+    return revisions
+
+
+def load_fixture(con: Connection, two_articles: bool = False) -> None:
+    """Drop every table, load the fixture article (and the second one if asked), and give
+    their paragraphs stub vectors."""
     apply_schema(con)
     ingest_page(con, fixture_revisions(), tier=1)
-    embed_missing(con, StubEmbedder(), [FIXTURE_PAGE_ID], min_chars=FIXTURE_MIN_EMBED_CHARS)
+    page_ids = [FIXTURE_PAGE_ID]
+    if two_articles:
+        ingest_page(con, second_article_revisions(), tier=1)
+        page_ids.append(SECOND_PAGE_ID)
+    embed_missing(con, StubEmbedder(), page_ids, min_chars=FIXTURE_MIN_EMBED_CHARS)
 
 
 def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI
     parser = argparse.ArgumentParser(description="Reset a database and load the test article.")
     parser.add_argument("--db", required=True, help="database name, e.g. wikilens_e2e")
+    parser.add_argument("--two-articles", action="store_true", help="also load a small second article")
     args = parser.parse_args(argv)
     if not args.db.startswith("wikilens_"):
         parser.error("refusing to reset a database that is not a wikilens_ test database")
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     con = connect(load_settings(), database=args.db)
     try:
-        load_fixture(con)
+        load_fixture(con, two_articles=args.two_articles)
     finally:
         con.close()
     logging.getLogger(__name__).info("fixture loaded into %s", args.db)

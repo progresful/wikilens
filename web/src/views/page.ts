@@ -6,6 +6,7 @@ import type { Frame, Wording } from '../types';
 import type { WordingCache } from '../wordingCache';
 
 export interface PageModel {
+  pageId: number;
   title: string;
   firstTs: number;
   frame: Frame | null;
@@ -54,6 +55,7 @@ function applyChurn(element: HTMLElement, wordings: number | undefined, tinted: 
 function releaseAnswer(element: HTMLElement): void {
   element.classList.remove('answer', 'ghost', 'reverted', 'loose');
   element.hidden = false;
+  delete element.dataset.tracked;
   element.replaceChildren();
   delete element.dataset.hash;       // so its text is written again from the frame
 }
@@ -74,7 +76,14 @@ export function mountPage(root: HTMLElement): PageView {
     if (
       last !== null && last.frame === model.frame && last.wordingsVersion === model.wordingsVersion
       && last.churn === model.churn && last.answerParaId === model.answerParaId && last.title === model.title
+      && last.pageId === model.pageId
     ) return;
+    if (last === null || last.pageId !== model.pageId) {
+      // Another article: nothing of the previous one may stay, whatever state its elements were in.
+      elements.clear();
+      blocks.replaceChildren();
+      empty.hidden = true;
+    }
     last = model;
     heading.textContent = model.title;
     const frame = model.frame;
@@ -82,7 +91,7 @@ export function mountPage(root: HTMLElement): PageView {
 
     const wanted = new Set(frame.blocks.map((block) => block.paraId));
     for (const [paraId, element] of elements) {
-      if (paraId !== model.answerParaId && element.classList.contains('answer')) releaseAnswer(element);
+      if (paraId !== model.answerParaId && element.dataset.tracked === '1') releaseAnswer(element);
       if (wanted.has(paraId)) {
         delete element.dataset.absent;
       } else if (paraId === model.answerParaId) {
@@ -121,11 +130,15 @@ export function mountPage(root: HTMLElement): PageView {
 
   function answerElement(paraId: number): HTMLElement {
     const existing = elements.get(paraId);
-    if (existing !== undefined) return existing;
+    if (existing !== undefined) {
+      existing.dataset.tracked = '1';
+      return existing;
+    }
     const element = document.createElement('div');
     element.className = 'para';
     element.dataset.paraId = String(paraId);
     element.dataset.absent = '1';
+    element.dataset.tracked = '1';
     elements.set(paraId, element);
     blocks.prepend(element);
     return element;

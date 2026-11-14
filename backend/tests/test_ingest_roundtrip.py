@@ -184,3 +184,15 @@ def test_ingest_tolerates_a_wording_committed_by_another_loader_meanwhile(con, m
         other.close()
     assert report.revisions == 10
     assert count(con, "SELECT COUNT(*) FROM wording") == 9
+
+
+def test_fixture_can_load_a_second_article(con):
+    from wikilens.fixture import SECOND_PAGE_ID, second_article_revisions
+
+    load_fixture(con, two_articles=True)
+    assert count(con, "SELECT COUNT(*) FROM article") == 2
+    cur = con.cursor()
+    cur.execute("SELECT title, revisions FROM article WHERE page_id = %s", (SECOND_PAGE_ID,))
+    assert cur.fetchone() == ("Toinen artikkeli", 2)
+    assert verify_page(con, second_article_revisions(), every=1) == 2
+    assert count(con, "SELECT COUNT(*) FROM wording_vector") == 11      # 8 of the first article, 3 of the second

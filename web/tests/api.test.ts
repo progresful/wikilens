@@ -67,7 +67,9 @@ describe('api client', () => {
     const controller = new AbortController();
     await expect(createApi(fetchImpl).frame(1, 123, controller.signal)).resolves.toEqual(frame);
     expect(calls[0]?.url).toBe('/api/articles/1/at?t=123');
-    expect(calls[0]?.init?.signal).toBe(controller.signal);
+    expect(calls[0]?.init?.signal?.aborted).toBe(false);
+    controller.abort();
+    expect(calls[0]?.init?.signal?.aborted).toBe(true);        // the caller's abort reaches the request
   });
 
   it('lets an abort surface as an abort, not as a server error', async () => {
@@ -132,5 +134,28 @@ describe('all wordings of an article', () => {
     const { fetchImpl, calls } = fakeFetch(() => json(wordings));
     await expect(createApi(fetchImpl).articleWordings(7)).resolves.toEqual(wordings);
     expect(calls.map((call) => call.url)).toEqual(['/api/articles/7/wordings']);
+  });
+});
+
+describe('a server that does not answer', () => {
+  const hangs = (_url: string, init?: RequestInit): Promise<Response> =>
+    new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+    });
+
+  it('gives up after the time limit with a plain error', async () => {
+    const error = await createApi(hangs, { timeoutMs: 20 }).articles().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(0);
+    expect((error as ApiError).message).toContain('did not answer');
+  });
+
+  it('still reports the caller\'s own abort as an abort', async () => {
+    const controller = new AbortController();
+    const pending = createApi(hangs, { timeoutMs: 5000 }).frame(1, 123, controller.signal).catch((e: unknown) => e);
+    controller.abort();
+    const error = await pending;
+    expect(error).not.toBeInstanceOf(ApiError);
+    expect((error as Error).name).toBe('AbortError');
   });
 });

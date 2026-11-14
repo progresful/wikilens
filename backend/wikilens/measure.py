@@ -114,7 +114,7 @@ def render_markdown(facts: Mapping[str, str], frames: Percentiles, embed: Percen
         _row("Question embedding (bge-m3 through Ollama)", embed),
         _row("Ranking every wording an article ever had (versioned rows joined to vectors)", rank),
         "",
-        "Database and model time only, measured in the Python process, warm, one connection, no other load.",
+        "Database and model time only, measured in the Python process, warm, one connection.",
         "Network, JSON and browser time are not included.",
     ]
     return "\n".join(lines) + "\n"
