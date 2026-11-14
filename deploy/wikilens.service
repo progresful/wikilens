@@ -1,0 +1,27 @@
+# /etc/systemd/system/wikilens.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now wikilens
+#   journalctl -u wikilens -f
+[Unit]
+Description=WikiLens API (Finnish Wikipedia through time)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=emils
+WorkingDirectory=/srv/apps/wikilens
+# Database credentials, ports and the model's address. Not in git.
+EnvironmentFile=/srv/apps/wikilens/.env
+Environment=PYTHONPATH=/srv/apps/wikilens/backend
+Environment=PYTHONUNBUFFERED=1
+# Listens on 127.0.0.1:$WIKILENS_API_PORT only; nginx is the way in.
+ExecStart=/srv/apps/wikilens/.venv/bin/python -m wikilens.api
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+MemoryMax=700M
+
+[Install]
+WantedBy=multi-user.target

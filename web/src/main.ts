@@ -101,6 +101,7 @@ function dispatch(action: Action): void {
 
 /** Bring a section to the top of the article view; the lead is the top itself. */
 function scrollToSection(headingParaId: number | null): void {
+  answerView.letGo();          // the reader is going somewhere else: the answer no longer holds the view
   if (headingParaId === null) {
     pageScroll.scrollTo({ top: 0, behavior: 'smooth' });
     return;
@@ -121,6 +122,7 @@ function stopPlaying(): void {
 function scrollToBlock(index: number, within: number): void {
   const box = pageView.blockBoxes()[index];
   if (box === undefined) return;
+  answerView.letGo();
   const top = box.top + box.height * within - pageScroll.clientHeight / 2;
   pageScroll.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
 }
@@ -399,7 +401,12 @@ window.addEventListener('keydown', (event) => {
 });
 pageScroll.addEventListener('scroll', queueOverview, { passive: true });
 window.addEventListener('resize', queueOverview);
-new ResizeObserver(queueOverview).observe(pageView.blocks);     // a wording that grows or shrinks moves what is in view
+// When the article changes size (a wording grows or shrinks, or its text arrives late on a slow
+// connection), the answer is kept in view and the overview's view box is redrawn.
+new ResizeObserver(() => {
+  answerView.settle();
+  queueOverview();
+}).observe(pageView.blocks);
 playButton.addEventListener('click', togglePlay);
 must<HTMLButtonElement>('.prev').addEventListener('click', () => step(-1));
 must<HTMLButtonElement>('.next').addEventListener('click', () => step(1));

@@ -342,3 +342,38 @@ test('a closest wording that came back several times is given with its whole spa
   // Said of the wording, not of this one stretch of it, which ended in 2012.
   await expect(page.locator('.closest-later')).toContainText('It stood 3 times, last until 1 Jan 2015.');
 });
+
+// ---- found on the deployed site: on a slow connection the article's text can arrive after the answer ----
+
+async function answerFullyInView(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const view = document.querySelector('#page-scroll')?.getBoundingClientRect();
+    const answer = document.querySelector('.para.answer')?.getBoundingClientRect();
+    return view !== undefined && answer !== undefined && answer.top >= view.top - 1 && answer.bottom <= view.bottom + 1;
+  });
+}
+
+test('when the page around the answer changes size, the answer stays in view', async ({ page }) => {
+  await ask(page);
+  expect(await answerFullyInView(page)).toBe(true);
+  // What late-arriving text does: everything above the answer grows.
+  await page.evaluate(() => { (document.querySelector('.para.kind-h') as HTMLElement).style.minHeight = '520px'; });
+  await expect.poll(() => answerFullyInView(page)).toBe(true);
+});
+
+test('once the reader has scrolled away by hand, a change of size does not pull the page back', async ({ page }) => {
+  await ask(page);
+  await page.evaluate(() => { (document.querySelector('.para.kind-h') as HTMLElement).style.minHeight = '520px'; });
+  await expect.poll(() => answerFullyInView(page)).toBe(true);
+  const scroller = page.locator('#page-scroll');
+  const held = await scroller.evaluate((element) => element.scrollTop);
+  await scroller.hover();
+  await page.mouse.wheel(0, -300);
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeLessThan(held - 150);
+  const left = await scroller.evaluate((element) => element.scrollTop);
+  await page.evaluate(() => { (document.querySelector('.para.kind-h') as HTMLElement).style.minHeight = '560px'; });
+  await page.waitForTimeout(400);
+  // Being pulled back to the answer would move the page some 300 pixels; it stays about where it was left.
+  expect(Math.abs(await scroller.evaluate((element) => element.scrollTop) - left)).toBeLessThan(60);
+  expect(await answerFullyInView(page)).toBe(false);
+});

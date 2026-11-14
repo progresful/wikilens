@@ -24,6 +24,13 @@ export interface AnswerHandlers {
 
 export interface AnswerView {
   update(model: AnswerModel): void;
+  /**
+   * The page around the answer changed size (its text arrived late, or words are still growing in):
+   * put the answer back in view, unless the reader has moved the article by hand since.
+   */
+  settle(): void;
+  /** The reader moved the article themselves: leave it there until the playhead moves again. */
+  letGo(): void;
 }
 
 interface Parts {
@@ -52,6 +59,7 @@ interface ThenParts {
 
 const REVISION_URL = 'https://fi.wikipedia.org/?oldid=';
 const TOP_MARGIN_PX = 12;
+const GLIDE_MS = 700;          // how long the page takes to glide to a newly asked answer
 const WEAK_NOTICE = 'weak match: nothing in this article matches the question well; this is the closest paragraph.';
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
@@ -172,6 +180,17 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
   let shownIndex: number | null = null;
   let shownTokens: readonly string[] | null = null;
   let lastTime: number | null = null;
+  let held = false;            // the view is where this code put it, not where the reader did
+  let glidingUntil = 0;
+  let settleLater: number | null = null;
+
+  // Anything the reader does to the article with a hand takes it out of this code's keeping.
+  const byHand = (): void => {
+    held = false;
+  };
+  scroller.addEventListener('wheel', byHand, { passive: true });
+  scroller.addEventListener('touchmove', byHand, { passive: true });
+  scroller.addEventListener('pointerdown', byHand);
 
   function build(paraId: number): Parts {
     const element = page.answerElement(paraId);
@@ -196,6 +215,22 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
     const room = scroller.clientHeight - parts.element.offsetHeight;
     const top = parts.element.offsetTop - (room > 2 * TOP_MARGIN_PX ? room / 2 : TOP_MARGIN_PX);
     scroller.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'instant' });
+    held = true;
+    if (smooth) glidingUntil = performance.now() + GLIDE_MS;
+  }
+
+  function settle(): void {
+    if (!held || parts === null) return;
+    const wait = glidingUntil - performance.now();
+    if (wait <= 0) {
+      centre(false);
+    } else if (settleLater === null) {
+      // A glide is under way: let it finish, then correct once for whatever changed meanwhile.
+      settleLater = window.setTimeout(() => {
+        settleLater = null;
+        settle();
+      }, wait);
+    }
   }
 
   function show(current: Parts, segments: readonly Segment[], index: number, model: AnswerModel): void {
@@ -230,6 +265,7 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
       shownTokens = null;
       lastTime = null;
       pinned.hidden = true;
+      held = false;
       return;
     }
     const changedParagraph = parts === null || parts.paraId !== tracked.paraId || shownSegments !== tracked.segments;
@@ -262,5 +298,5 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
     lastTime = model.time;
   }
 
-  return { update };
+  return { update, settle, letGo: byHand };
 }

@@ -1,0 +1,14 @@
+/* The page that shows the film: the site's own colours and type. */
+:root { --text: #202122; --subtle: #54595d; --link: #3366cc; --border: #a2a9b1; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #fff; color: var(--text); font-family: sans-serif; line-height: 1.6; }
+main { max-width: 1120px; margin: 0 auto; padding: 40px 24px 64px; }
+h1 { margin: 0; font-family: 'Linux Libertine', Georgia, Times, serif; font-weight: 400; font-size: 56px; line-height: 1.1; }
+.line { margin: 6px 0 24px; padding-bottom: 14px; font-size: 20px; color: var(--subtle); border-bottom: 1px solid var(--border); }
+video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #f8f9fa; border: 1px solid var(--border); }
+.links { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 20px 0 0; font-size: 17px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a.primary { padding: 8px 20px; font-weight: 700; color: #fff; background: var(--link); border-radius: 2px; }
+a.primary:hover { text-decoration: none; background: #3056a9; }
+.credit { margin-top: 28px; font-size: 13px; color: var(--subtle); }
