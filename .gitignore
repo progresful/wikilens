@@ -1,0 +1,15 @@
+.venv/
+node_modules/
+web/dist/
+data/
+.env
+.superpowers/
+.worktrees/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.coverage
+test-results/
+playwright-report/
+coverage/
+.DS_Store
