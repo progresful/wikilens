@@ -23,11 +23,14 @@ from pymysql.connections import Connection
 
 from wikilens.config import load_settings
 from wikilens.db import apply_schema, connect
+from wikilens.embed import embed_missing
+from wikilens.embedder import StubEmbedder
 from wikilens.ingest import ingest_page
 from wikilens.parquet_source import RawRevision
 
 FIXTURE_PAGE_ID = 1
 FIXTURE_TITLE = "Testisota"
+FIXTURE_MIN_EMBED_CHARS = 20   # the fixture's paragraphs are short; real articles use embed.MIN_EMBED_CHARS
 
 HEADING = "== Tausta =="
 FIRST_A = "Talvisota alkoi marraskuussa 1939, kun Neuvostoliitto hyökkäsi Suomeen."
@@ -75,9 +78,10 @@ def fixture_revisions() -> list[RawRevision]:
 
 
 def load_fixture(con: Connection) -> None:
-    """Drop every table and load the fixture article."""
+    """Drop every table, load the fixture article, and give its paragraphs stub vectors."""
     apply_schema(con)
     ingest_page(con, fixture_revisions(), tier=1)
+    embed_missing(con, StubEmbedder(), [FIXTURE_PAGE_ID], min_chars=FIXTURE_MIN_EMBED_CHARS)
 
 
 def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI
