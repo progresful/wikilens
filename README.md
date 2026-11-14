@@ -64,13 +64,15 @@ verified query shapes are in [docs/measurements.md](docs/measurements.md).
 
 | | |
 |---|---|
-| Loaded | 50 articles, 31,848 revisions (every version since 2003) |
-| Raw wikitext of those revisions | 1,955 MB |
-| Text and history in MariaDB | 60 MB: only changed paragraphs are stored (vectors add 309 MB) |
-| Frame query (`AS OF`) | 0.9 ms median, 2.2 ms at the 95th percentile |
-| Ranking every wording of an article | 12 ms median, 18 ms at the 95th percentile |
+| Loaded | all 19,742 articles of the dataset, 862,076 revisions, 2003 to 1 October 2026; 0 failed |
+| Load time | 8.5 minutes on 8 cores, about 1,690 revisions per second |
+| Raw wikitext of those revisions | 11,599 MB |
+| Text and history in MariaDB | 959 MB, about 12 times smaller: only changed paragraphs are stored |
+| Embedded for questions by meaning | 50 articles (32,507 vectors, 309 MB); the rest answer by keyword |
+| Frame query (`AS OF`), random articles and moments across the whole dataset | 0.6 ms median, 0.9 ms at the 95th percentile |
+| Ranking an article's whole history against a question | 12 ms median, 22 ms at the 95th percentile |
 | Question embedding | 20 ms |
-| Correctness | for every article, the stored state at sampled revisions equals the cleaned text of that revision |
+| Correctness | for every one of the 19,742 articles, the stored state at sampled revisions equals the cleaned text of that revision |
 | Dragging the whole timeline of a 2,143-revision article | every pointer move gets its own live query; 55 to 60 frames per second; no main-thread task over 50 ms |
 
 These are database and model times. They do not include network, JSON or drawing.
@@ -89,8 +91,8 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 ollama serve &                          # skip if Ollama already runs
 ollama pull bge-m3                      # 1.2 GB
 
-.venv/bin/python -m wikilens.ingest --tier1 --workers 8    # downloads the dataset (315 MB); about 3 minutes
-.venv/bin/python -m wikilens.embed --tier1                 # about 30 minutes on a laptop
+.venv/bin/python -m wikilens.ingest --all --workers 8      # downloads the dataset (315 MB), loads all of it; about 9 minutes
+.venv/bin/python -m wikilens.embed --tier1                 # vectors for 50 articles; about 30 minutes on a laptop
 
 scripts/demo.sh                         # builds the page and serves http://127.0.0.1:8000
 ```
@@ -103,7 +105,7 @@ Other commands:
 scripts/check.sh                                   # every test, including the browser tests
 .venv/bin/python -m wikilens.stories --pages 1256  # paragraphs with eventful histories
 .venv/bin/python -m wikilens.measure               # re-measure and rewrite docs/measurements.md
-.venv/bin/python -m wikilens.ingest --all --workers 8   # all 19,742 articles, history only
+.venv/bin/python -m wikilens.ingest --tier1 --workers 8 # only the 50 articles that get vectors; about 3 minutes
 ```
 
 ## How it is built
@@ -136,9 +138,9 @@ live frame query for each move.
 
 ## Limits
 
-- **Coverage.** The full experience covers 50 articles (the set used by MariaDB's own
-  system-versioning starter). `ingest --all` loads history for the rest of the dataset; those
-  articles answer questions by keyword match until they are embedded.
+- **Coverage.** Every article of the dataset can be scrubbed. Questions by meaning cover 50
+  articles (the set used by MariaDB's own system-versioning starter), because only those are
+  embedded; the other 19,692 answer by keyword match and say so.
 - **The corpus ends on 1 October 2026.** Nothing after that is known here, and the timeline
   stops there.
 - **Text is simplified.** Templates, tables and references are not shown, so edits inside

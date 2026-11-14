@@ -101,28 +101,53 @@ article (about 300 blocks on the page, 2,143 revisions), dragging from the corpu
 An article's paragraph texts are fetched once when it opens (`GET /api/articles/{id}/wordings`),
 so a frame only carries paragraph identities and hashes.
 
+## The whole dataset, 14 November 2026
+
+`python -m wikilens.ingest --reset --all --workers 8 --verify-every 100`: every article of
+dataset M, loaded from scratch with the final cleaner and matcher.
+
+| | |
+|---|---|
+| Articles | 19,742 loaded, 0 failed |
+| Revisions | 862,076, from 21 February 2003 to 1 October 2026 10:59 UTC |
+| Load time | 510 s with 8 worker processes, about 1,690 revisions per second |
+| Round trip | every article passes: at the first, the last and every 100th revision, the stored article equals the cleaner's output for that revision |
+| Revisions the dump carried no text for | 483; the previous state is carried forward and they are counted |
+| Raw wikitext of the 862,076 revisions | 11,599 MB (sum of the dump's byte counts) |
+| Text and history in MariaDB | 959 MB: `wording` 526.5 (with its full-text index), `revision` 221.3, `paragraph` 208.6, `article` 2.5. About 12 times smaller than the raw text |
+| Paragraph versions (rows of the versioned table, all history) | 1,219,370 |
+| Distinct wordings | 904,054 |
+| Vectors | 32,507, for the 50 tier 1 articles only (308.6 MB with the index). The other 19,692 articles answer questions by keyword match |
+
+An earlier attempt at this load stalled for half an hour on one article (page 15600, a
+35,000-character paragraph): comparing two such texts character by character does not finish.
+Texts over about 1,000 characters are now compared by word, and very long ones by the words
+they share; `backend/tests/test_matcher.py` holds the case under a time limit.
+
+The frame timings below are taken at random moments of random articles across all 19,742.
+
 <!-- measured by wikilens.measure: start -->
 ## Coverage and speed, measured
 
 | | |
 |---|---|
 | Machine | Apple M1 Pro, 32 GB RAM |
-| Measured | 14 November 2026 13:46 |
+| Measured | 14 November 2026 14:40 |
 | Python | 3.14.10 |
 | MariaDB | 12.3.3-MariaDB-ubu2404 |
-| Articles | 50 |
-| Revisions | 31,848 |
-| Paragraph versions (rows of the versioned table, all history) | 60,294 |
-| Distinct wordings | 38,455 |
-| Vectors | 32,461 |
-| Database size | 369 MB |
+| Articles | 19,742 |
+| Revisions | 862,076 |
+| Paragraph versions (rows of the versioned table, all history) | 1,219,370 |
+| Distinct wordings | 904,054 |
+| Vectors | 32,507 |
+| Database size | 1,268 MB |
 
 | Milliseconds | p50 | p95 | |
 |---|---|---|---|
-| Frame query: the article at a random moment (`FOR SYSTEM_TIME AS OF`) | 0.90 | 2.23 | 200 samples |
-| Question embedding (bge-m3 through Ollama) | 20.23 | 23.20 | 30 samples |
-| Ranking every wording an article ever had (versioned rows joined to vectors) | 12.40 | 17.75 | 30 samples |
+| Frame query: the article at a random moment (`FOR SYSTEM_TIME AS OF`) | 0.56 | 0.93 | 200 samples |
+| Question embedding (bge-m3 through Ollama) | 19.63 | 20.49 | 30 samples |
+| Ranking every wording an article ever had (versioned rows joined to vectors) | 12.32 | 21.70 | 30 samples |
 
-Database and model time only, measured in the Python process, warm, one connection, no other load.
+Database and model time only, measured in the Python process, warm, one connection.
 Network, JSON and browser time are not included.
 <!-- measured by wikilens.measure: end -->
