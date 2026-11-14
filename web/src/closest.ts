@@ -68,5 +68,6 @@ export function thenAndNow(segments: readonly Segment[], index: number, closestH
 
 /** A wording for quoting: whole when short, otherwise cut at the limit with an ellipsis. */
 export function quote(text: string, limit: number = QUOTE_CHARS): string {
-  return text.length <= limit ? text : `${text.slice(0, limit).trimEnd()}…`;
+  const characters = Array.from(text);        // whole characters, so none is cut in half
+  return characters.length <= limit ? text : `${characters.slice(0, limit).join('').trimEnd()}…`;
 }

@@ -275,6 +275,16 @@ test('a question that matches an old wording says when the article read like tha
   await expect(then.locator('.closest-change')).toHaveText('The wording shown below differs: 1 word gone, 4 new.');
   await expect(page.locator('.seg.closest')).toHaveCount(1);
   await expect(page.locator('.closest-here')).toBeHidden();
+  await expect(page.locator('#legend')).toContainText('closest to the question');
+});
+
+test('a paragraph chosen from the other matches gets its own closest wording', async ({ page }) => {
+  await ask(page);
+  await page.locator('.chip').first().click();          // "Toinen kappale…": no wording of it shares a word with the question
+  await expect(page.locator('.answer')).toContainText('Toinen kappale');
+  await expect(page.locator('.closest-match')).toBeHidden();       // all equally far: today's wording is the one named
+  await expect(page.locator('.closest-here')).toBeVisible();
+  await expect(page.locator('.seg.closest')).toHaveCount(1);
 });
 
 test('from today the page jumps to the closest wording, and from there back to today', async ({ page }) => {
@@ -313,6 +323,7 @@ test('a question answered by keyword singles out no wording', async ({ page }) =
   await expect(page.locator('.closest-match')).toBeHidden();
   await expect(page.locator('.closest-here')).toBeHidden();
   await expect(page.locator('.seg.closest')).toHaveCount(0);
+  await expect(page.locator('#legend')).not.toContainText('closest');       // nothing on the band to explain
 });
 
 test('a closest wording that came back several times is given with its whole span', async ({ page }) => {

@@ -83,4 +83,8 @@ describe('quote', () => {
     expect(quote('lyhyt', 10)).toBe('lyhyt');
     expect(quote('yksi kaksi kolme neljä', 10)).toBe('yksi kaksi…');
   });
+
+  it('never cuts a character in half', () => {
+    expect(quote('ab😀cd', 3)).toBe('ab😀…');
+  });
 });

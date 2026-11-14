@@ -88,6 +88,38 @@ def test_closest_wording_of_a_paragraph_can_be_one_it_no_longer_has(con):
     assert closest_wordings(con, PAGE, unit(1), [1]) == {1: H2}
 
 
+def test_closest_wording_prefers_todays_on_a_tie_and_skips_one_too_brief_to_draw(con):
+    """Page 8. Paragraph 1: H4 2010-2012, H5 from 2012, both with the same vector.
+    Paragraph 2: H6 for half a millisecond in 2011 (the question's exact match), then H7."""
+    h4, h5, h6, h7 = b"\x04" * 16, b"\x05" * 16, b"\x06" * 16, b"\x07" * 16
+    enable_history_insert(con)
+    cur = con.cursor()
+    columns = "page_id, para_id, pos, hash, rev_id, match_rule, similarity, row_start"
+    cur.executemany(
+        f"INSERT INTO paragraph ({columns}, row_end) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+        [
+            (8, 1, 1.0, h4, 201, 1, None, T("2010-01-01"), T("2012-01-01")),
+            (8, 2, 2.0, h6, 203, 1, None, T("2011-01-01 00:00:00"), T("2011-01-01 00:00:00.000500")),
+        ],
+    )
+    cur.executemany(
+        f"INSERT INTO paragraph ({columns}) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        [(8, 1, 1.0, h5, 202, 4, 0.9, T("2012-01-01")), (8, 2, 2.0, h7, 204, 4, 0.9, T("2011-01-01 00:00:00.000500"))],
+    )
+    cur.executemany("INSERT INTO wording (hash, kind, text) VALUES (%s, %s, %s)",
+                    [(h4, "p", "neljä"), (h5, "p", "viisi"), (h6, "p", "kuusi"), (h7, "p", "seitsemän")])
+    cur.executemany(
+        "INSERT INTO wording_vector (hash, embedding) VALUES (%s, VEC_FromText(%s))",
+        [(h4, vector_literal(unit(3))), (h5, vector_literal(unit(3))),
+         (h6, vector_literal(unit(4))), (h7, vector_literal(unit(5)))],
+    )
+    con.commit()
+    # Equally close: the wording the paragraph has today is named, not an old one that sorts first.
+    assert closest_wordings(con, 8, unit(3), [1]) == {1: h5}
+    # The exact match stood under a millisecond and is never drawn on the timeline, so it is not named.
+    assert closest_wordings(con, 8, unit(4), [2]) == {2: h7}
+
+
 def test_closest_wording_of_no_paragraphs_asks_nothing(con):
     assert closest_wordings(con, PAGE, unit(0), []) == {}
 

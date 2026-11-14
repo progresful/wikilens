@@ -256,7 +256,7 @@ function step(dir: 1 | -1): void {
 /** Whether this article's story was read by a person. Always on screen, not only inside the list. */
 function renderReviewStatus(): void {
   const article = state.articles.find((candidate) => candidate.pageId === state.pageId);
-  if (article === undefined) {
+  if (article === undefined || state.overview === null) {
     reviewStatus.textContent = '';
     return;
   }
@@ -264,7 +264,7 @@ function renderReviewStatus(): void {
   // "History only" means the article has no vectors, so its questions are answered by keyword. That is
   // read from the article itself, not from which set it was loaded with: any article can be embedded later.
   reviewStatus.textContent = article.reviewed ? 'story read by hand'
-    : state.overview?.hasVectors === true ? 'automatic matching, not reviewed'
+    : state.overview.hasVectors ? 'automatic matching, not reviewed'
       : 'history only · automatic matching, not reviewed';
 }
 
@@ -283,6 +283,7 @@ function renderCredit(): void {
   credit.replaceChildren('Text: Finnish Wikipedia, CC BY-SA 4.0, simplified · ', link);
 }
 
+const CLOSEST_SWATCH = 'swatch-closest';
 // Each entry: the stylesheet class that draws the swatch, and what it stands for.
 const LEGEND_LANDING: readonly (readonly [string, string])[] = [
   ['swatch-edits', 'every edit, by month'],
@@ -291,7 +292,7 @@ const LEGEND_LANDING: readonly (readonly [string, string])[] = [
 const LEGEND_ASKED: readonly (readonly [string, string])[] = [
   ['swatch-edits', 'every edit, by month'],
   ['swatch-wording', 'the answer\'s wordings, darker = later'],
-  ['swatch-closest', 'the wording closest to the question'],
+  [CLOSEST_SWATCH, 'the wording closest to the question'],
   ['swatch-reverted', 'replaced, then reverted'],
   ['swatch-gap', 'answer missing from the article'],
   ['swatch-added', 'words added'],
@@ -299,10 +300,13 @@ const LEGEND_ASKED: readonly (readonly [string, string])[] = [
 ];
 
 function renderLegend(): void {
-  const mode = state.tracked === null ? 'landing' : 'asked';
+  // The closest wording is explained only when one was singled out and so is marked on the band.
+  const mode = state.tracked === null ? 'landing' : state.tracked.closestHash === null ? 'asked' : 'asked-closest';
   if (legend.dataset.mode === mode) return;
   legend.dataset.mode = mode;
-  legend.replaceChildren(...(mode === 'landing' ? LEGEND_LANDING : LEGEND_ASKED).map(([swatchClass, label]) => {
+  const entries = mode === 'landing' ? LEGEND_LANDING
+    : LEGEND_ASKED.filter(([swatchClass]) => mode === 'asked-closest' || swatchClass !== CLOSEST_SWATCH);
+  legend.replaceChildren(...entries.map(([swatchClass, label]) => {
     const item = document.createElement('span');
     const swatch = document.createElement('i');
     swatch.className = swatchClass;

@@ -134,7 +134,7 @@ a:hover { text-decoration: underline; }
 .seg.reverted { min-width: 3px; z-index: 2; background: var(--red); box-shadow: 0 0 0 1px var(--surface); }
 .seg.gap { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--placeholder) 4px 5px); box-shadow: none; }
 /* The wording closest to the question: never faded, and flagged above the band. */
-.seg.closest { z-index: 1; opacity: 1 !important; }
+.seg.closest { opacity: 1 !important; }
 .seg.closest:not(.reverted) { background: var(--then); }
 .seg.closest::before { content: ''; position: absolute; left: -4px; top: -9px; border: 4px solid transparent; border-top: 7px solid var(--then);
   border-bottom: 0; }

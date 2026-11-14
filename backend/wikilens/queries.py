@@ -5,11 +5,11 @@ import json
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from pymysql.connections import Connection
 
-from wikilens.timeline import HistoryRow
+from wikilens.timeline import SHORTEST, HistoryRow
 
 # A current row's row_end is MariaDB's largest timestamp; anything past this is "still current".
 STILL_CURRENT_AFTER = datetime(2037, 1, 1)
@@ -35,12 +35,16 @@ LIMIT %s"""
 
 # Which wording of each paragraph is closest to the question. It may be one the paragraph stopped
 # having years ago: that is how the page can say "it read like that then, and differently now".
+# Only wordings with a vector are candidates (headings and very short ones have none), and only
+# those that stood long enough to be drawn on the timeline. Of equally close wordings the one
+# that stood most recently is named, so today's wording is never passed over for an old twin.
 CLOSEST_SQL = """SELECT p.para_id, p.hash, MIN(VEC_DISTANCE_COSINE(v.embedding, @question)) AS distance
 FROM paragraph FOR SYSTEM_TIME ALL AS p
 JOIN wording_vector AS v ON v.hash = p.hash
 WHERE p.page_id = %s AND p.para_id IN ({marks})
 GROUP BY p.para_id, p.hash
-ORDER BY distance, p.hash"""
+HAVING MAX(TIMESTAMPDIFF(MICROSECOND, p.row_start, p.row_end)) >= %s
+ORDER BY distance, MAX(p.row_end) DESC, p.hash"""
 
 # Nearest wordings across all articles, through the vector index.
 NEAREST_SQL = """SELECT hash, VEC_DISTANCE_COSINE(embedding, VEC_FromText(%s)) AS distance
@@ -96,7 +100,7 @@ def closest_wordings(con: Connection, page_id: int, vector: Sequence[float],
     marks = ", ".join(["%s"] * len(wanted))
     with con.cursor() as cur:
         cur.execute(SET_QUESTION_SQL, (vector_literal(vector),))
-        cur.execute(CLOSEST_SQL.format(marks=marks), (page_id, *wanted))
+        cur.execute(CLOSEST_SQL.format(marks=marks), (page_id, *wanted, SHORTEST // timedelta(microseconds=1)))
         rows = cur.fetchall()
     closest: dict[int, bytes] = {}
     for para_id, block_hash, _ in rows:          # closest first, so a paragraph's first row is its best
