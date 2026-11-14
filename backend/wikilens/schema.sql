@@ -65,7 +65,8 @@ CREATE TABLE paragraph (
   WITH SYSTEM VERSIONING;
 
 -- Vectors live in a plain table, so the vector index is on documented ground.
-CREATE TABLE wording_vector (
+-- IF NOT EXISTS: a reset may keep this table (db.apply_schema(keep_vectors=True)).
+CREATE TABLE IF NOT EXISTS wording_vector (
   hash      BINARY(16) NOT NULL PRIMARY KEY,
   embedding VECTOR(1024) NOT NULL,
   VECTOR INDEX (embedding) M=16 DISTANCE=cosine

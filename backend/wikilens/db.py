@@ -35,10 +35,14 @@ def schema_statements(sql: str) -> list[str]:
     return [statement.strip() for statement in kept.split(";") if statement.strip()]
 
 
-def apply_schema(con: Connection) -> None:
-    """Drop and recreate every table."""
+def apply_schema(con: Connection, keep_vectors: bool = False) -> None:
+    """Drop and recreate every table. With keep_vectors the vector table survives: a vector
+    belongs to a wording's text (its hash), so it stays valid when articles are loaded again,
+    and embedding is the slow part."""
     with con.cursor() as cur:
         for statement in schema_statements(SCHEMA_PATH.read_text()):
+            if keep_vectors and statement == "DROP TABLE IF EXISTS wording_vector":
+                continue
             cur.execute(statement)
     con.commit()
 

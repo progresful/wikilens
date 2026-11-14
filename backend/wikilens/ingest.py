@@ -212,7 +212,8 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI
     scope.add_argument("--pages", help="comma-separated page ids")
     scope.add_argument("--tier1", action="store_true", help="the starter's 50 articles")
     scope.add_argument("--all", action="store_true", help="every article in dataset M")
-    parser.add_argument("--reset", action="store_true", help="drop and recreate every table first")
+    parser.add_argument("--reset", action="store_true", help="drop and recreate the tables first; vectors are kept")
+    parser.add_argument("--drop-vectors", action="store_true", help="with --reset: drop the vectors as well")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--verify-every", type=int, default=25, help="round-trip check every Nth revision; 0 = off")
     args = parser.parse_args(argv)
@@ -224,7 +225,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI
     con = connect(load_settings())
     try:
         if args.reset or not schema_exists(con):
-            apply_schema(con)
+            apply_schema(con, keep_vectors=args.reset and not args.drop_vectors)
             log.info("tables created" if not args.reset else "tables dropped and recreated")
     finally:
         con.close()

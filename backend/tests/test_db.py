@@ -18,3 +18,24 @@ def test_schema_exists(con):
     con.cursor().execute("DROP TABLE article")
     assert schema_exists(con) is False
     apply_schema(con)
+
+
+def test_apply_schema_can_keep_vectors(con):
+    from wikilens.db import apply_schema
+    from wikilens.queries import vector_literal
+
+    def count(table):
+        cur = con.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM {table}")
+        return cur.fetchone()[0]
+
+    apply_schema(con)
+    cur = con.cursor()
+    cur.execute("INSERT INTO wording_vector (hash, embedding) VALUES (%s, VEC_FromText(%s))",
+                (b"\x01" * 16, vector_literal([1.0] + [0.0] * 1023)))
+    cur.execute("INSERT INTO corpus_fact (name, value) VALUES ('a', 'b')")
+    con.commit()
+    apply_schema(con, keep_vectors=True)
+    assert (count("wording_vector"), count("corpus_fact")) == (1, 0)
+    apply_schema(con)
+    assert count("wording_vector") == 0
