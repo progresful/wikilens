@@ -62,3 +62,50 @@ bge-m3 through Ollama 0.40.16 on the machine above, batches of 32, article 1256 
 | The same with the vector passed as a binary parameter | 9.8 ms; not used, because the statement shown on screen would contain a blob |
 
 All three forms returned the same three paragraphs with the same distances. Medians of 7 runs.
+
+## Tier 1 load, 14 November 2026
+
+`python -m wikilens.ingest --reset --tier1 --workers 8 --verify-every 25`, then
+`python -m wikilens.embed --tier1`. The 50 articles are those of MariaDB's system-versioning
+starter (`data/articles.tsv`).
+
+| | |
+|---|---|
+| Ingest | 31,848 revisions in 183 s with 8 worker processes, about 174 revisions per second |
+| Round trip | all 50 articles pass: at the first, the last and every 25th revision, the stored article equals the cleaner's output for that revision |
+| Revisions the dump carried no text for | 8; the previous state is carried forward and they are counted |
+| Paragraph identities | 18,248 |
+| Raw wikitext of the 31,848 revisions | 1,955 MB (sum of the dump's byte counts) |
+| Text and history in MariaDB | 60.1 MB: `wording` 36.1, `paragraph` 13.0, `revision` 11.0. About 33 times smaller than the raw text |
+| Vectors | 308.6 MB for `wording_vector` including its index; 32,461 vectors of 1,024 float32 values. 347 belong to wordings an earlier cleaner version produced and are no longer referenced |
+| Embedding | 16 to 20 passages per second; about 30 minutes for all of tier 1 |
+
+The first parallel load failed: two loaders sharing a wording collided with MariaDB error 1020
+under the default isolation level. Loads now run at READ COMMITTED and insert wordings in hash
+order; `backend/tests/test_ingest_roundtrip.py` reproduces the collision.
+
+<!-- measured by wikilens.measure: start -->
+## Coverage and speed, measured
+
+| | |
+|---|---|
+| Machine | Apple M1 Pro, 32 GB RAM |
+| Measured | 14 November 2026 13:46 |
+| Python | 3.14.10 |
+| MariaDB | 12.3.3-MariaDB-ubu2404 |
+| Articles | 50 |
+| Revisions | 31,848 |
+| Paragraph versions (rows of the versioned table, all history) | 60,294 |
+| Distinct wordings | 38,455 |
+| Vectors | 32,461 |
+| Database size | 369 MB |
+
+| Milliseconds | p50 | p95 | |
+|---|---|---|---|
+| Frame query: the article at a random moment (`FOR SYSTEM_TIME AS OF`) | 0.90 | 2.23 | 200 samples |
+| Question embedding (bge-m3 through Ollama) | 20.23 | 23.20 | 30 samples |
+| Ranking every wording an article ever had (versioned rows joined to vectors) | 12.40 | 17.75 | 30 samples |
+
+Database and model time only, measured in the Python process, warm, one connection, no other load.
+Network, JSON and browser time are not included.
+<!-- measured by wikilens.measure: end -->

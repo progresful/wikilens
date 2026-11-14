@@ -35,6 +35,7 @@ interface Parts {
 }
 
 const REVISION_URL = 'https://fi.wikipedia.org/?oldid=';
+const TOP_MARGIN_PX = 12;
 const WEAK_NOTICE = 'weak match: nothing in this article matches the question well; this is the closest paragraph.';
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, className: string): HTMLElementTagNameMap[K] {
@@ -97,7 +98,9 @@ export function mountAnswer(page: PageView, scroller: HTMLElement, handlers: Ans
 
   function centre(smooth: boolean): void {
     if (parts === null || parts.element.hidden) return;
-    const top = parts.element.offsetTop - (scroller.clientHeight - parts.element.offsetHeight) / 2;
+    // Centre the answer; if it is taller than the view, show its top, where its label is.
+    const room = scroller.clientHeight - parts.element.offsetHeight;
+    const top = parts.element.offsetTop - (room > 2 * TOP_MARGIN_PX ? room / 2 : TOP_MARGIN_PX);
     scroller.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'instant' });
   }
 

@@ -13,6 +13,7 @@ import { initialState, reduce } from './state';
 import type { Action, AppState } from './state';
 import { formatDate, formatSpan, segmentIndexAt, snapTime, stepTo } from './time';
 import type { Frame, Overview } from './types';
+import { mountAbout } from './views/about';
 import { mountAnswer } from './views/answer';
 import { mountAsk } from './views/ask';
 import { mountMinimap } from './views/minimap';
@@ -71,6 +72,8 @@ const timelineView = mountTimeline(must('#timeline'), {
     syncPlaying();
   },
 });
+
+mountAbout(must('#about'), must<HTMLButtonElement>('.about-toggle'), { loadCoverage: () => api.coverage() });
 
 const scrubber = createScrubber({
   fetchFrame: (pageId, t, signal) => api.frame(pageId, t, signal),
@@ -187,10 +190,8 @@ function renderCredit(): void {
   link.target = '_blank';
   link.rel = 'noopener';
   link.textContent = 'the article and its authors';
-  credit.replaceChildren(
-    'Text: Finnish Wikipedia, CC BY-SA 4.0, simplified (no templates, tables or references) · ',
-    link,
-  );
+  credit.title = 'Simplified: templates, tables and references are not shown.';
+  credit.replaceChildren('Text: Finnish Wikipedia, CC BY-SA 4.0, simplified · ', link);
 }
 
 const LEGEND_LANDING: readonly (readonly [string, string])[] = [

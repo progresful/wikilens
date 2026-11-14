@@ -200,6 +200,15 @@ def _ingest_with_retry(con: Connection, revisions: Sequence[RawRevision], tier: 
     raise AssertionError("unreachable")
 
 
+def _unlist(con: Connection, page_id: int) -> None:  # pragma: no cover - CLI worker
+    """Take an article that failed its round trip off the list. Its versioned rows cannot be
+    deleted one article at a time, so they stay, unreachable, until the next --reset."""
+    with con.cursor() as cur:
+        cur.execute("DELETE FROM article WHERE page_id = %s", (page_id,))
+        cur.execute("DELETE FROM revision WHERE page_id = %s", (page_id,))
+    con.commit()
+
+
 def _ingest_file(task: tuple[str, list[int] | None, list[int], int]) -> list[str]:  # pragma: no cover - CLI worker
     """Worker: load the wanted articles of one Parquet file. Returns one log line per article."""
     path, wanted, tier1, verify_every = task
@@ -214,8 +223,18 @@ def _ingest_file(task: tuple[str, list[int] | None, list[int], int]) -> list[str
             if page_id in loaded:
                 lines.append(f"{title}: already loaded, skipped")
                 continue
-            report = _ingest_with_retry(con, revisions, tier=1 if page_id in tier1 else 2)
-            checked = verify_page(con, revisions, verify_every) if verify_every else 0
+            # One article that cannot be loaded or does not round-trip must not stop the rest.
+            try:
+                report = _ingest_with_retry(con, revisions, tier=1 if page_id in tier1 else 2)
+            except Exception as error:  # noqa: BLE001 - reported per article, the run goes on
+                lines.append(f"FAILED {title} (page {page_id}): {type(error).__name__}: {error}")
+                continue
+            try:
+                checked = verify_page(con, revisions, verify_every) if verify_every else 0
+            except RoundTripError as error:
+                _unlist(con, page_id)
+                lines.append(f"FAILED {title} (page {page_id}): round trip: {error}; not listed")
+                continue
             lines.append(
                 f"{report.title}: {report.revisions} revisions, {report.paragraph_rows} paragraph rows, "
                 f"{report.wordings} wordings, {report.text_missing} without text, {report.seconds:.1f} s"
@@ -252,11 +271,16 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - CLI
     started = time.perf_counter()
     tasks = [(str(path), wanted, tier1 if not args.pages else wanted or [], args.verify_every) for path in files]
     with get_context("spawn").Pool(max(1, args.workers)) as pool:
+        loaded = failed = 0
         for lines in pool.imap_unordered(_ingest_file, tasks):
             for line in lines:
+                failed += line.startswith("FAILED")
+                loaded += "paragraph rows" in line
+                if args.all and not line.startswith("FAILED"):
+                    continue          # thousands of articles: only failures and the totals are printed
                 log.info(line)
-    log.info("done in %.0f s", time.perf_counter() - started)
-    return 0
+    log.info("loaded %s articles, %s failed, in %.0f s", loaded, failed, time.perf_counter() - started)
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":  # pragma: no cover

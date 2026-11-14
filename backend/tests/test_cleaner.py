@@ -67,3 +67,12 @@ def test_interlanguage_link_lines_are_dropped():
 
 def test_a_link_with_a_colon_inside_a_sentence_is_kept():
     assert pairs("Katso [[w:Winter War]] ja [[Talvisota: historia]].") == [("p", "Katso w:Winter War ja Talvisota: historia.")]
+
+
+def test_parentheses_left_empty_by_a_removed_template_are_dropped():
+    assert pairs("Suomettuminen ({{k-de|Finnlandisierung}}) tarkoittaa vaikutusvaltaa.") == [
+        ("p", "Suomettuminen tarkoittaa vaikutusvaltaa.")
+    ]
+    assert pairs("Urho Kekkonen ({{IPA|x}}, {{k-sv|y}}) oli presidentti (1956–1982).") == [
+        ("p", "Urho Kekkonen oli presidentti (1956–1982).")
+    ]

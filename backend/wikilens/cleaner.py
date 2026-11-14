@@ -13,6 +13,7 @@ Changed from the original in three ways:
   - Openers and closers are found with one regular expression instead of a character loop.
   - HTML entities (&nbsp;, &ndash;, ...) are decoded.
   - Lines that are only a link to another language's article are dropped.
+  - Parentheses left empty by a removed template are dropped.
 """
 from __future__ import annotations
 
@@ -35,6 +36,8 @@ _PIPED_LINK = re.compile(r"\[\[([^\]|]*)\|([^\]]*)\]\]")
 _LINK = re.compile(r"\[\[([^\]]*)\]\]")
 _EXTERNAL_LINK = re.compile(r"\[https?://\S+ ([^\]]*)\]")
 _TAG = re.compile(r"<[^>]+>")
+# "( )" or "(, )": what is left of a parenthesis whose whole content was templates.
+_EMPTY_PARENTHESES = re.compile(r"[ \t]*\([\s,;]*\)")
 _HEADING = re.compile(r"^(=+)\s*(.*?)\s*=+$")
 _TEMPLATE_TOKEN = re.compile(r"\{\{|\}\}")
 _TABLE_TOKEN = re.compile(r"\{\||\|\}")
@@ -71,6 +74,7 @@ def clean(wikitext: str) -> list[Block]:
     t = _REF.sub("", t)
     t = _drop_matched(t, _TEMPLATE_TOKEN, "{{")
     t = _drop_matched(t, _TABLE_TOKEN, "{|")
+    t = _EMPTY_PARENTHESES.sub("", t)
     t = _FILE_OR_CATEGORY.sub("", t)
     t = _LANGUAGE_LINK_LINE.sub("", t)
     t = _PIPED_LINK.sub(r"\2", t)

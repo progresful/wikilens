@@ -85,3 +85,42 @@ test('the SQL panel can be collapsed', async ({ page }) => {
   await page.locator('.sql-toggle').click();
   await expect(page.locator('.sql-text')).toBeHidden();
 });
+
+test('the about panel shows counts read from the database', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.about')).toBeHidden();
+  await page.locator('.about-toggle').click();
+  const about = page.locator('.about');
+  await expect(about).toBeVisible();
+  await expect(about).toContainText('1 article');
+  await expect(about).toContainText('10 revisions');
+  await expect(about).toContainText('8 vectors');
+  await expect(about).toContainText('MariaDB 12.');
+  await expect(about).toContainText('1 Oct 2026');
+  await page.locator('.about-toggle').click();
+  await expect(about).toBeHidden();
+});
+
+test('history-only articles are found by typing; the list holds the articles with the full experience', async ({ page }) => {
+  const article = (pageId: number, title: string, tier: number, reviewed: boolean) => ({
+    pageId, title, revisions: 10, firstTs: Date.UTC(2010, 2, 1), lastTs: Date.UTC(2017, 0, 1), tier, reviewed,
+    questions: reviewed ? [{ fi: 'Milloin?', en: 'When?' }] : [],
+  });
+  await page.route('**/api/articles', (route) => route.fulfill({
+    json: envelope([article(1, 'Testisota', 1, true), article(7, 'Toinen artikkeli', 1, false), article(9, 'Kolmas artikkeli', 2, false)]),
+  }));
+  await page.goto('/');
+  await expect(page.locator('select.article-select option')).toHaveText(['Testisota', 'Toinen artikkeli']);
+  await expect(page.locator('select.article-select optgroup')).toHaveCount(2);
+  const search = page.locator('input.article-search');
+  await expect(search).toBeVisible();
+  await expect(search).toHaveAttribute('placeholder', /1 more article/);
+  await expect(page.locator('datalist#more-articles option')).toHaveCount(1);
+  await expect(page.locator('.example-question')).toHaveText(['Milloin?', 'When?']);
+});
+
+test('with only full-experience articles there is no search box', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('select.article-select')).toHaveValue('1');
+  await expect(page.locator('input.article-search')).toHaveCount(0);
+});
