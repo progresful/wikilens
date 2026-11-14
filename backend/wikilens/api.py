@@ -50,7 +50,10 @@ from wikilens.timeline import build_timeline
 
 log = logging.getLogger(__name__)
 
-WEAK_DISTANCE = 0.55   # cosine distance at or beyond which a match is labelled weak
+# Cosine distance at or beyond which a match is labelled weak. With bge-m3 on the tier 1
+# articles, questions the article answers scored 0.29-0.44 and unrelated ones 0.54-0.60
+# (docs/stories.md).
+WEAK_DISTANCE = 0.5
 MATCHES = 3
 STORIES_PATH = Path(__file__).with_name("stories.json")
 WEB_DIST = REPO_ROOT / "web" / "dist"
@@ -97,6 +100,7 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
                stories_path: Path | None = None) -> FastAPI:
     pool = ConnectionPool(connect if connect is not None else lambda: db.connect(settings))
     stories = load_stories(stories_path if stories_path is not None else STORIES_PATH)
+    story_order = {page_id: index for index, page_id in enumerate(stories)}
     corpus_end_ms = to_ms(settings.corpus_end)
     known_articles: set[int] = set()
     app = FastAPI(title="WikiLens", docs_url=None, redoc_url=None, openapi_url=None)
@@ -129,7 +133,8 @@ def create_app(settings: Settings, embedder: Embedder, connect: Callable[[], Con
     def articles() -> dict[str, Any]:
         with pool.connection() as con:
             listed = [article_json(article, stories) for article in queries.list_articles(con)]
-        return envelope(sorted(listed, key=lambda a: (not a["reviewed"], a["title"])))
+        # Reviewed articles first, in the order stories.json lists them; then the rest by title.
+        return envelope(sorted(listed, key=lambda a: (story_order.get(a["pageId"], len(story_order)), a["title"])))
 
     @app.get("/api/articles/{page_id}/overview")
     def overview(page_id: int = PathParam(ge=1)) -> dict[str, Any]:

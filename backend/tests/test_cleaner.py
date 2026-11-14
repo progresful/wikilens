@@ -58,3 +58,12 @@ def test_html_entities_are_decoded():
 
 def test_escaped_markup_stays_text():
     assert pairs("Kirjoita &lt;b&gt;lihavoitu&lt;/b&gt; näin.") == [("p", "Kirjoita <b>lihavoitu</b> näin.")]
+
+
+def test_interlanguage_link_lines_are_dropped():
+    text = "Sota päättyi 1940.\n[[en:Winter War]]\n[[zh-min-nan:Tang-chiàn]]\n[[he:מלחמת החורף]]\n"
+    assert pairs(text) == [("p", "Sota päättyi 1940.")]
+
+
+def test_a_link_with_a_colon_inside_a_sentence_is_kept():
+    assert pairs("Katso [[w:Winter War]] ja [[Talvisota: historia]].") == [("p", "Katso w:Winter War ja Talvisota: historia.")]

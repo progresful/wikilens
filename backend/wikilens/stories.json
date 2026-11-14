@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "page_id": 5261,
+    "questions": [
+      { "fi": "Kuka keksi käsitteen suomettuminen?", "en": "Who coined the term Finlandization?" }
+    ]
+  },
+  {
+    "page_id": 11477,
+    "questions": [
+      { "fi": "Mikä lapuanliike oli?", "en": "What was the Lapua Movement?" }
+    ]
+  },
+  {
+    "page_id": 1256,
+    "questions": [
+      { "fi": "Miten talvisota syttyi?", "en": "How did the Winter War begin?" }
+    ]
+  }
+]

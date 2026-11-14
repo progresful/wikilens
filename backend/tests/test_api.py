@@ -265,3 +265,22 @@ def test_reviewed_articles_come_first_with_their_questions(con, tmp_path):
         (article,) = ok(test_client.get("/api/articles"))
     assert article["reviewed"] is True
     assert article["questions"] == [{"fi": "Milloin sota alkoi?", "en": "When did the war start?"}]
+
+
+def test_reviewed_articles_keep_the_order_of_the_stories_file(con, tmp_path):
+    from wikilens.ingest import ingest_page
+
+    load_fixture(con)
+    second = [replace(rev, page_id=2, title="Aakkonen", rev_id=rev.rev_id + 1000, parent_id=None)
+              for rev in fixture_revisions()]
+    ingest_page(con, second, tier=1)
+    third = [replace(rev, page_id=3, title="Bertta", rev_id=rev.rev_id + 2000, parent_id=None)
+             for rev in fixture_revisions()]
+    ingest_page(con, third, tier=1)
+    stories = tmp_path / "stories.json"
+    stories.write_text('[{"page_id": 1, "questions": []}, {"page_id": 2, "questions": []}]')
+    app = create_app(SETTINGS, StubEmbedder(), connect=open_test_connection, stories_path=stories)
+    with TestClient(app) as test_client:
+        listed = ok(test_client.get("/api/articles"))
+    # the lead story first, as the file has it, although "Aakkonen" sorts before "Testisota"; then the rest by title
+    assert [(a["pageId"], a["reviewed"]) for a in listed] == [(1, True), (2, True), (3, False)]

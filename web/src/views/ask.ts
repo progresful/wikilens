@@ -71,7 +71,9 @@ export function mountAsk(root: HTMLElement, handlers: AskHandlers): AskView {
     if (ask === null) {
       if (model.examples.length > 0) nodes.push(span('ask-hint', 'try:'));
       for (const example of model.examples) {
+        // The same question in Finnish and in English: the model reads both, the article is Finnish.
         nodes.push(button('example-question', example.fi, example.en, () => handlers.onAsk(example.fi)));
+        nodes.push(button('example-question', example.en, example.fi, () => handlers.onAsk(example.en)));
       }
       return nodes;
     }

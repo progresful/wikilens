@@ -12,6 +12,7 @@ Changed from the original in three ways:
   - A redirect page yields no blocks.
   - Openers and closers are found with one regular expression instead of a character loop.
   - HTML entities (&nbsp;, &ndash;, ...) are decoded.
+  - Lines that are only a link to another language's article are dropped.
 """
 from __future__ import annotations
 
@@ -27,6 +28,9 @@ _REF = re.compile(r"<ref[^>]*>.*?</ref>", re.DOTALL)
 _FILE_OR_CATEGORY = re.compile(
     r"\[\[(?:Tiedosto|Kuva|File|Image|Luokka|Category):[^\[\]]*(?:\[\[[^\]]*\]\][^\[\]]*)*\]\]"
 )
+# A line that is only a link to the article in another language ([[en:Winter War]]). Old
+# revisions end with dozens of them; Wikipedia showed them in the sidebar, not in the text.
+_LANGUAGE_LINK_LINE = re.compile(r"^\[\[[a-z]{2,3}(?:-[a-z-]+)?:[^\[\]|]+\]\][ \t]*$", re.MULTILINE)
 _PIPED_LINK = re.compile(r"\[\[([^\]|]*)\|([^\]]*)\]\]")
 _LINK = re.compile(r"\[\[([^\]]*)\]\]")
 _EXTERNAL_LINK = re.compile(r"\[https?://\S+ ([^\]]*)\]")
@@ -68,6 +72,7 @@ def clean(wikitext: str) -> list[Block]:
     t = _drop_matched(t, _TEMPLATE_TOKEN, "{{")
     t = _drop_matched(t, _TABLE_TOKEN, "{|")
     t = _FILE_OR_CATEGORY.sub("", t)
+    t = _LANGUAGE_LINK_LINE.sub("", t)
     t = _PIPED_LINK.sub(r"\2", t)
     t = _LINK.sub(r"\1", t)
     t = _EXTERNAL_LINK.sub(r"\1", t)
